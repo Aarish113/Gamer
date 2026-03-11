@@ -81,17 +81,31 @@
                 </div>
             </section>
 
-            <!-- Game View Containers -->
+            <!-- Game View -->
             <section id="game-view" class="view">
-                <div class="game-header">
-                    <button id="btn-back" class="btn-icon">←</button>
-                    <h2 id="game-title">Game Title</h2>
-                </div>
-                <div id="game-container">
-                    <!-- Game specific content injected here -->
-                </div>
+                <header class="game-view-header">
+                    <div class="header-left">
+                        <button id="btn-back" class="btn-icon">
+                            <i class="fas fa-arrow-left"></i>
+                        </button>
+                        <h2 id="game-title">Game Title</h2>
+                    </div>
+                    <div class="header-right">
+                        <button id="btn-rules" class="btn-rules">Rules</button>
+                    </div>
+                </header>
+                <div id="game-container"></div>
             </section>
         </main>
+    </div>
+
+    <!-- Rules Modal -->
+    <div id="rules-modal" class="modal-overlay">
+        <div class="modal-content">
+            <button id="close-rules" class="close-btn">&times;</button>
+            <h2 id="rules-game-title">Game Rules</h2>
+            <div id="rules-content"></div>
+        </div>
     </div>
 
     <script src="main.js"></script>

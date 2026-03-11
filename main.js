@@ -78,10 +78,73 @@ document.addEventListener('DOMContentLoaded', () => {
                 gameTitle.innerText = 'Neon Tetris';
                 loadTetris();
                 break;
+            case 'ultimate-ttt':
+                gameTitle.innerText = 'Ultimate Tic-Tac-Toe';
+                loadUltimateTTT();
+                break;
             default:
                 console.error('Unknown game ID:', gameId);
         }
+        activeGameId = gameId;
     }
+
+    // Rules Logic
+    const rulesModal = document.getElementById('rules-modal');
+    const rulesTitle = document.getElementById('rules-game-title');
+    const rulesContent = document.getElementById('rules-content');
+    const closeRules = document.getElementById('close-rules');
+    const btnRules = document.getElementById('btn-rules');
+    let activeGameId = '';
+
+    const GAME_RULES = {
+        'tic-tac-toe': `
+            <ul>
+                <li>Players take turns placing X or O in a 3x3 grid.</li>
+                <li>First player to get three in a row wins.</li>
+                <li>Play locally or against the computer using Minimax AI.</li>
+            </ul>
+        `,
+        'snake': `
+            <ul>
+                <li>Use arrow keys to control the snake.</li>
+                <li>Eat red food to grow and earn points.</li>
+                <li>Avoid hitting walls or yourself!</li>
+            </ul>
+        `,
+        'memory': `
+            <ul>
+                <li>Flip two cards to find matches.</li>
+                <li>Remember the positions of icons.</li>
+                <li>Match all 8 pairs to win the game.</li>
+            </ul>
+        `,
+        'tetris': `
+            <ul>
+                <li>Stack blocks to clear horizontal lines.</li>
+                <li>Use Arrow Keys to move and rotate pieces.</li>
+                <li>Spacebar for a Hard Drop.</li>
+                <li>Level increases every 10 lines!</li>
+            </ul>
+        `,
+        'ultimate-ttt': `
+            <ul>
+                <li>A game of Tic-Tac-Toe where each square is a smaller 3x3 board.</li>
+                <li>Your move in a small board determines which small board your opponent plays next.</li>
+                <li>Win three small boards in a row to win the game!</li>
+                <li>High-level strategy meets recursion.</li>
+            </ul>
+        `
+    };
+
+    btnRules.addEventListener('click', () => {
+        if (!activeGameId) return;
+        rulesTitle.innerText = `${gameTitle.innerText} Rules`;
+        rulesContent.innerHTML = GAME_RULES[activeGameId] || "Rules coming soon...";
+        rulesModal.classList.add('active');
+    });
+
+    closeRules.addEventListener('click', () => rulesModal.classList.remove('active'));
+    window.addEventListener('click', (e) => { if (e.target === rulesModal) rulesModal.classList.remove('active'); });
 
     // --- TIC TAC TOE ---
     function loadTicTacToe() {

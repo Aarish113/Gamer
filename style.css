@@ -10,22 +10,25 @@
     --card-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
 }
 
-* {
+/* Global Overrides */
+html, body {
+    height: 100%;
     margin: 0;
     padding: 0;
-    box-sizing: border-box;
-    font-family: 'Outfit', sans-serif;
+    overflow: hidden !important;
+}
+
+::-webkit-scrollbar {
+    display: none !important;
 }
 
 body {
-    background: var(--bg-dark);
-    background-image: 
-        radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
-        radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), 
-        radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
+    background: radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
+                radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), 
+                radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%),
+                var(--bg-dark);
     min-height: 100vh;
     color: var(--text-primary);
-    overflow: hidden;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -112,7 +115,7 @@ body {
 main {
     flex: 1;
     padding: 60px;
-    overflow-y: auto;
+    overflow: hidden; /* Prevent scrolling inside main */
 }
 
 .view {
