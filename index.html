@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arcade Hub | Premium Game Collection</title>
+    <meta name="description" content="A curated collection of visually stunning classic games.">
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="background-overlay"></div>
+    <div id="app" class="glass-container">
+        <!-- Sidebar/Navigation -->
+        <nav class="sidebar">
+            <div class="logo">
+                <span class="logo-icon">🎮</span>
+                <h1>Arcade Hub</h1>
+            </div>
+            <ul class="nav-links">
+                <li class="active" data-view="dashboard">Dashboard</li>
+                <li data-view="tic-tac-toe">Tic-Tac-Toe</li>
+                <li data-view="snake">Snake</li>
+                <li data-view="memory">Memory</li>
+                <li data-view="tetris">Tetris</li>
+                <li data-view="ultimate-ttt">Ultimate TTT</li>
+            </ul>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main id="main-content">
+            <!-- Dashboard View -->
+            <section id="dashboard" class="view active">
+                <header>
+                    <h2>Welcome, Player!</h2>
+                    <p>Select a game to start playing.</p>
+                </header>
+                <div class="game-grid">
+                    <div class="game-card" data-game="tic-tac-toe">
+                        <div class="card-image ttt-preview"></div>
+                        <div class="card-content">
+                            <h3>Tic-Tac-Toe</h3>
+                            <p>Pure strategy in a minimalist design.</p>
+                            <button class="btn-play">Play Now</button>
+                        </div>
+                    </div>
+                    <div class="game-card" data-game="snake">
+                        <div class="card-image snake-preview"></div>
+                        <div class="card-content">
+                            <h3>Neon Snake</h3>
+                            <p>Classic arcade fun with modern vibes.</p>
+                            <button class="btn-play">Play Now</button>
+                        </div>
+                    </div>
+                    <div class="game-card" data-game="memory">
+                        <div class="card-image memory-preview"></div>
+                        <div class="card-content">
+                            <h3>Memory Match</h3>
+                            <p>Train your brain with beautiful cards.</p>
+                            <button class="btn-play">Play Now</button>
+                        </div>
+                    </div>
+                    <div class="game-card" data-game="tetris">
+                        <div class="card-image tetris-preview"></div>
+                        <div class="card-content">
+                            <h3>Neon Tetris</h3>
+                            <p>The legendary puzzle game, reimagined.</p>
+                            <button class="btn-play">Play Now</button>
+                        </div>
+                    </div>
+                    <div class="game-card" data-game="ultimate-ttt">
+                        <div class="card-image ult-ttt-preview"></div>
+                        <div class="card-content">
+                            <h3>Ultimate TTT</h3>
+                            <p>Strategic depth with nested boards.</p>
+                            <button class="btn-play">Play Now</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Game View Containers -->
+            <section id="game-view" class="view">
+                <div class="game-header">
+                    <button id="btn-back" class="btn-icon">←</button>
+                    <h2 id="game-title">Game Title</h2>
+                </div>
+                <div id="game-container">
+                    <!-- Game specific content injected here -->
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+</html>
