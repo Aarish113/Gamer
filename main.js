@@ -442,11 +442,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const icons = ['🎮', '🕹️', '👾', '🚀', '⭐', '💎', '🌈', '🔥'];
         let cards = [], flipped = [], matches = 0, canFlip = true;
-        let timeLeft = 30, stage = 1, timerInterval = null;
+        let timeLeft = 30, stage = 1, timerInterval = null, timerPaused = false;
+        let cheatCode = "112358", inputBuffer = "";
 
         function startTimer() {
             clearInterval(timerInterval);
             timerInterval = setInterval(() => {
+                if (timerPaused) return; // Secret: "112358" to toggle
                 timeLeft -= 0.1;
                 if (timeLeft <= 0) {
                     timeLeft = 0;
@@ -456,6 +458,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 timerEl.innerText = timeLeft.toFixed(1);
             }, 100);
         }
+
+        const handleCheatCode = (e) => {
+            inputBuffer += e.key;
+            if (inputBuffer.length > cheatCode.length) inputBuffer = inputBuffer.slice(-cheatCode.length);
+            if (inputBuffer === cheatCode) {
+                timerPaused = !timerPaused;
+                inputBuffer = "";
+                status.innerText = timerPaused ? "Time Paused..." : "";
+                status.style.color = "#f59e0b";
+                console.log("%c Cheat Activated: Time manipulation enabled. ", "background: #222; color: #bada55; font-size: 1.2rem;");
+            }
+        };
+        window.addEventListener('keydown', handleCheatCode);
 
         function gameOver() {
             canFlip = false;
@@ -528,7 +543,11 @@ document.addEventListener('DOMContentLoaded', () => {
         create();
         startTimer();
 
-        return () => { clearInterval(timerInterval); celebOverlay.classList.remove('active'); };
+        return () => { 
+            clearInterval(timerInterval); 
+            window.removeEventListener('keydown', handleCheatCode);
+            celebOverlay.classList.remove('active'); 
+        };
     }
 
     // --- MINES ---
