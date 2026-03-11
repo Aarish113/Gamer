@@ -12,7 +12,23 @@
 </head>
 <body>
     <div class="background-overlay"></div>
-    <div id="app" class="glass-container">
+    <!-- Name Entry Screen -->
+    <div id="welcome-screen" class="welcome-overlay">
+        <div class="welcome-card glass-container">
+            <div class="logo">
+                <span class="logo-icon">🎮</span>
+                <h1>Arcade Hub</h1>
+            </div>
+            <h2>Enter Your Name</h2>
+            <p>Ready to challenge POWER?</p>
+            <div class="input-group">
+                <input type="text" id="player-name-input" placeholder="Your Name" autocomplete="off">
+                <button id="btn-start-playing" class="btn-play">Let's Play</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="app" class="glass-container" style="display: none;">
         <!-- Sidebar/Navigation -->
         <nav class="sidebar">
             <div class="logo">

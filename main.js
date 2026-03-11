@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const gameContainer = document.getElementById('game-container');
 
     let currentGameCleanup = null;
+    let playerName = "Player"; // Default
 
     // Navigation Logic
     function switchView(viewId) {
@@ -38,6 +39,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 launchGame(view);
             }
         });
+    });
+
+    // Name Entry Logic
+    const welcomeScreen = document.getElementById('welcome-screen');
+    const nameInput = document.getElementById('player-name-input');
+    const startBtn = document.getElementById('btn-start-playing');
+    const appContainer = document.getElementById('app');
+    const dashboardTitle = document.querySelector('#dashboard header h2');
+
+    startBtn.addEventListener('click', () => {
+        const name = nameInput.value.trim();
+        if (name) {
+            playerName = name;
+            dashboardTitle.innerText = `Welcome, ${playerName}!`;
+            welcomeScreen.style.display = 'none';
+            appContainer.style.display = 'flex';
+        } else {
+            nameInput.style.borderColor = '#ef4444';
+            setTimeout(() => nameInput.style.borderColor = 'var(--glass-border)', 1000);
+        }
+    });
+
+    // Also support 'Enter' key
+    nameInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') startBtn.click();
     });
 
     // Use event delegation for game cards and buttons - much more robust
@@ -101,7 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <ul>
                 <li>Players take turns placing X or O in a 3x3 grid.</li>
                 <li>First player to get three in a row wins.</li>
-                <li>Play locally or against the computer using Minimax AI.</li>
+                <li>Play locally or against the computer (named POWER) using Minimax AI.</li>
             </ul>
         `,
         'snake': `
@@ -154,7 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="ttt-container">
                 <div class="ttt-modes">
                     <button class="mode-btn active" data-mode="pvp">Local PvP</button>
-                    <button class="mode-btn" data-mode="ai">vs Computer</button>
+                    <button class="mode-btn" data-mode="ai">vs POWER</button>
                 </div>
                 <div class="ttt-info">
                     <div class="player-indicator" id="player-x">Player X</div>
@@ -214,7 +240,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             if (roundWon) {
-                status.innerText = `Player ${currentPlayer} Wins!`;
+                status.innerText = currentPlayer === 'X' ? `Congratulations!!! ${playerName}!` : "POWER Wins!";
                 gameActive = false;
                 winCondition.forEach(i => cells[i].classList.add('winner'));
                 return true;
@@ -369,13 +395,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <div class="memory-grid" id="memory-grid"></div>
                 <div class="memory-controls"><button id="memory-reset" class="btn-secondary">Reset Game</button></div>
+                <div id="memory-status" class="ttt-status"></div>
             </div>
         `;
         currentGameCleanup = initMemoryLogic();
     }
 
     function initMemoryLogic() {
-        const grid = document.getElementById('memory-grid'), movesEl = document.getElementById('memory-moves'), matchEl = document.getElementById('memory-matches'), resetBtn = document.getElementById('memory-reset');
+        const grid = document.getElementById('memory-grid'), movesEl = document.getElementById('memory-moves'), matchEl = document.getElementById('memory-matches'), resetBtn = document.getElementById('memory-reset'), status = document.getElementById('memory-status');
         const icons = ['🎮', '🕹️', '👾', '🚀', '⭐', '💎', '🌈', '🔥'];
         let cards = [...icons, ...icons].sort(() => Math.random() - 0.5), flipped = [], matches = 0, moves = 0, canFlip = true;
 
@@ -391,7 +418,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         moves++; movesEl.innerText = moves; canFlip = false;
                         if (flipped[0].querySelector('.card-back').innerText === flipped[1].querySelector('.card-back').innerText) {
                             flipped.forEach(c => c.classList.add('matched')); matches++; matchEl.innerText = matches; flipped = []; canFlip = true;
-                            if (matches === 8) setTimeout(() => alert('Win!'), 500);
+                            if (matches === 8) status.innerText = `Congratulations!!! ${playerName}!`;
                         } else {
                             setTimeout(() => { flipped.forEach(c => c.classList.remove('flipped')); flipped = []; canFlip = true; }, 1000);
                         }
@@ -400,7 +427,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 grid.appendChild(el);
             });
         }
-        resetBtn.addEventListener('click', () => { moves = 0; matches = 0; movesEl.innerText = 0; matchEl.innerText = 0; create(); });
+        resetBtn.addEventListener('click', () => { moves = 0; matches = 0; movesEl.innerText = 0; matchEl.innerText = 0; status.innerText = ''; create(); });
         create();
         return () => {};
     }
@@ -447,7 +474,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         playerX.classList.add('active');
         playerX.innerText = "Player (X)";
-        playerO.innerText = "CPU (O)";
+        playerO.innerText = "POWER (O)";
 
         function checkWin(board) {
             for (let line of winLines) {
@@ -486,7 +513,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const bigWinner = checkWin(mainBoard);
             if (bigWinner) {
                 gameActive = false;
-                status.innerText = bigWinner === "draw" || bigWinner === "D" ? "Ultimate Draw!" : `Winner: ${bigWinner === 'X' ? 'Player' : 'Computer'}!`;
+                if (bigWinner === "draw" || bigWinner === "D") {
+                    status.innerText = "Ultimate Draw!";
+                } else {
+                    status.innerText = bigWinner === 'X' ? `Congratulations!!! ${playerName}!` : "Winner: POWER!";
+                }
                 document.querySelectorAll('.small-board').forEach(b => b.classList.remove('active'));
                 return;
             }
@@ -520,30 +551,61 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            // Unbeatable AI simulation: prioritize winning sub-board, blocking player, or center control
-            // 1. Can win sub-board?
+            // God Mode AI: Highly strategic evaluation for Ultimate TTT
+            // 1. Can win the GAME right now?
             for (let m of possibleMoves) {
-                const temp = [...smallBoards[m.boardIdx]];
-                temp[m.cellIdx] = 'O';
-                if (checkWin(temp) === 'O') return m;
+                const tempMain = [...mainBoard];
+                const tempSub = [...smallBoards[m.boardIdx]];
+                tempSub[m.cellIdx] = 'O';
+                if (checkWin(tempSub) === 'O') {
+                    tempMain[m.boardIdx] = 'O';
+                    if (checkWin(tempMain) === 'O') return m;
+                }
             }
 
-            // 2. Must block player win?
+            // 2. Can win a sub-board?
             for (let m of possibleMoves) {
-                const temp = [...smallBoards[m.boardIdx]];
-                temp[m.cellIdx] = 'X';
-                if (checkWin(temp) === 'X') return m;
+                const tempSub = [...smallBoards[m.boardIdx]];
+                tempSub[m.cellIdx] = 'O';
+                if (checkWin(tempSub) === 'O') return m;
             }
 
-            // 3. Prefer center of sub-board and center of big-board
-            const centerMoves = possibleMoves.filter(m => m.cellIdx === 4);
-            if (centerMoves.length > 0) {
-                const centerMajor = centerMoves.find(m => m.boardIdx === 4);
-                if (centerMajor) return centerMajor;
-                return centerMoves[Math.floor(Math.random() * centerMoves.length)];
+            // 3. Must block player from winning a sub-board?
+            for (let m of possibleMoves) {
+                const tempSub = [...smallBoards[m.boardIdx]];
+                tempSub[m.cellIdx] = 'X';
+                if (checkWin(tempSub) === 'X') return m;
             }
 
-            return possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
+            // 4. Strategic Evaluation: Prefer moves that don't send player to an open board
+            let bestMove = possibleMoves[0];
+            let bestScore = -Infinity;
+
+            for (let m of possibleMoves) {
+                let score = 0;
+                const cellWeights = [3, 2, 3, 2, 4, 2, 3, 2, 3];
+                score += cellWeights[m.cellIdx];
+                score += cellWeights[m.boardIdx] * 2;
+
+                if (mainBoard[m.cellIdx] !== "") {
+                    score -= 50; // Heavily penalize giving the player freedom
+                } else {
+                    const nextBoard = smallBoards[m.cellIdx];
+                    for (let i = 0; i < 9; i++) {
+                        if (nextBoard[i] === "") {
+                            const temp = [...nextBoard];
+                            temp[i] = 'X';
+                            if (checkWin(temp) === 'X') score -= 20; 
+                        }
+                    }
+                }
+
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestMove = m;
+                }
+            }
+            return bestMove;
         }
 
         cells.forEach(cell => {
