@@ -9,6 +9,23 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentGameCleanup = null;
     let playerName = "Player"; // Default
 
+    // Global Celebration Helper
+    const celebOverlay = document.getElementById('celebration-overlay');
+    const celebSubtext = document.getElementById('congrats-subtext');
+    const celebCloseBtn = document.getElementById('btn-close-celebration');
+
+    function showCelebration(message) {
+        if (celebOverlay && celebSubtext) {
+            celebSubtext.innerText = message || `You are the ultimate champion, ${playerName}!`;
+            celebOverlay.classList.add('active');
+        }
+    }
+
+    celebCloseBtn.addEventListener('click', () => {
+        celebOverlay.classList.remove('active');
+        switchView('dashboard');
+    });
+
     // Navigation Logic
     function switchView(viewId) {
         if (currentGameCleanup) {
@@ -267,6 +284,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 status.innerText = currentPlayer === 'X' ? `Congratulations!!! ${playerName}!` : "POWER Wins!";
                 gameActive = false;
                 winCondition.forEach(i => cells[i].classList.add('winner'));
+                if (currentPlayer === 'X') {
+                    setTimeout(() => showCelebration(`You defeated POWER in Tic-Tac-Toe!`), 500);
+                }
                 return true;
             }
             if (!gameState.includes("")) {
@@ -436,9 +456,8 @@ document.addEventListener('DOMContentLoaded', () => {
               matchEl = document.getElementById('memory-matches'), 
               stageEl = document.getElementById('memory-stage'),
               resetBtn = document.getElementById('memory-reset'), 
-              status = document.getElementById('memory-status'),
-              celebOverlay = document.getElementById('celebration-overlay'),
-              closeCelebBtn = document.getElementById('btn-close-celebration');
+              status = document.getElementById('memory-status');
+              // celebration refs moved to global scope
 
         const icons = ['🎮', '🕹️', '👾', '🚀', '⭐', '💎', '🌈', '🔥'];
         let cards = [], flipped = [], matches = 0, canFlip = true;
@@ -484,26 +503,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 stage++;
                 stageEl.innerText = stage;
                 timeLeft = stage === 2 ? 15 : 7.5;
-                status.innerText = `Stage ${stage-1} Clear! Get ready...`;
+                status.innerText = `Stage ${stage-1} Clear! ${timerPaused ? "(Pause Active)" : "Get ready..."}`;
                 canFlip = false;
                 setTimeout(() => {
-                    status.innerText = "";
+                    status.innerText = timerPaused ? "Time Paused..." : "";
                     create();
                     startTimer();
                 }, 2000);
             } else {
-                showCelebration();
+                showCelebration(`You mastered all levels of Memory Match!`);
             }
         }
 
-        function showCelebration() {
-            celebOverlay.classList.add('active');
-        }
 
-        closeCelebBtn.onclick = () => {
-            celebOverlay.classList.remove('active');
-            switchView('dashboard');
-        };
 
         function create() {
             matches = 0;
@@ -546,7 +558,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return () => { 
             clearInterval(timerInterval); 
             window.removeEventListener('keydown', handleCheatCode);
-            celebOverlay.classList.remove('active'); 
+            // celebOverlay.classList.remove('active');  // Removed local ref
         };
     }
 
@@ -666,7 +678,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            if (revealedCount === rows * cols - mineCount) endGame(true);
+            if (revealedCount === rows * cols - mineCount) {
+                endGame(true);
+                setTimeout(() => showCelebration(`The minefield is clear! Perfect job, ${playerName}!`), 500);
+            }
         }
 
         function toggleFlag(r, c) {
@@ -808,6 +823,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 grid = newGrid;
                 addTile();
                 updateUI();
+                if (grid.flat().includes(2048)) {
+                    setTimeout(() => showCelebration(`You reached the magic 2048 tile!`), 500);
+                }
                 if (isGameOver()) {
                     statusEl.innerText = 'Game Over!';
                     statusEl.style.color = '#ef4444';
@@ -925,6 +943,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     status.innerText = "Ultimate Draw!";
                 } else {
                     status.innerText = bigWinner === 'X' ? `Congratulations!!! ${playerName}!` : "Winner: POWER!";
+                    if (bigWinner === 'X') {
+                        setTimeout(() => showCelebration(`You outmaneuvered POWER in Ultimate TTT!`), 500);
+                    }
                 }
                 document.querySelectorAll('.small-board').forEach(b => b.classList.remove('active'));
                 return;
