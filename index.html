@@ -40,6 +40,8 @@
                 <li data-view="tic-tac-toe">Tic-Tac-Toe</li>
                 <li data-view="snake">Snake</li>
                 <li data-view="memory">Memory</li>
+                <li data-view="mines">Mines</li>
+                <li data-view="2048">2048</li>
                 <li data-view="tetris">Tetris</li>
                 <li data-view="ultimate-ttt">Ultimate TTT</li>
             </ul>
@@ -75,6 +77,22 @@
                         <div class="card-content">
                             <h3>Memory Match</h3>
                             <p>Train your brain with beautiful cards.</p>
+                            <button class="btn-play">Play Now</button>
+                        </div>
+                    </div>
+                    <div class="game-card" data-game="mines">
+                        <div class="card-image mines-preview"></div>
+                        <div class="card-content">
+                            <h3>Mines</h3>
+                            <p>Strategic grid clearing with risk.</p>
+                            <button class="btn-play">Play Now</button>
+                        </div>
+                    </div>
+                    <div class="game-card" data-game="2048">
+                        <div class="card-image g2048-preview"></div>
+                        <div class="card-content">
+                            <h3>2048</h3>
+                            <p>Merge tiles to reach the magic number.</p>
                             <button class="btn-play">Play Now</button>
                         </div>
                     </div>
@@ -121,6 +139,15 @@
             <button id="close-rules" class="close-btn">&times;</button>
             <h2 id="rules-game-title">Game Rules</h2>
             <div id="rules-content"></div>
+        </div>
+    </div>
+
+    <!-- Celebration Overlay -->
+    <div id="celebration-overlay" class="celebration-overlay">
+        <div class="celebration-content">
+            <h2 id="congrats-text">CONGRATULATIONS!</h2>
+            <p id="congrats-subtext">You are a Master of Memory!</p>
+            <button id="btn-close-celebration" class="btn-secondary">Back to Dashboard</button>
         </div>
     </div>
 

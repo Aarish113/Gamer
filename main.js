@@ -100,6 +100,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 gameTitle.innerText = 'Memory Match';
                 loadMemory();
                 break;
+            case 'mines':
+                gameTitle.innerText = 'Mines';
+                loadMines();
+                break;
+            case '2048':
+                gameTitle.innerText = '2048';
+                load2048();
+                break;
             case 'tetris':
                 gameTitle.innerText = 'Neon Tetris';
                 loadTetris();
@@ -140,8 +148,24 @@ document.addEventListener('DOMContentLoaded', () => {
         'memory': `
             <ul>
                 <li>Flip two cards to find matches.</li>
-                <li>Remember the positions of icons.</li>
-                <li>Match all 8 pairs to win the game.</li>
+                <li>Stage 1: 30s | Stage 2: 15s | Stage 3: 7.5s</li>
+                <li>Beat all 3 stages to win the game!</li>
+            </ul>
+        `,
+        'mines': `
+            <ul>
+                <li>Clear the grid without hitting a mine!</li>
+                <li>Numbers show how many mines are adjacent.</li>
+                <li>Right-click to flag potential mines.</li>
+                <li>Customizable grid size and mine count.</li>
+            </ul>
+        `,
+        '2048': `
+            <ul>
+                <li>Use Arrow Keys to slide tiles.</li>
+                <li>When two tiles with the same number touch, they merge into one!</li>
+                <li>Reach the 2048 tile to win!</li>
+                <li>Continue playing to reach the highest score possible.</li>
             </ul>
         `,
         'tetris': `
@@ -356,7 +380,11 @@ document.addEventListener('DOMContentLoaded', () => {
             // Collision
             if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount || snake.slice(1).some(p => p.x === head.x && p.y === head.y)) {
                 clearInterval(loop); paused = true; startBtn.innerText = 'Play Again';
-                if (score > highscore) localStorage.setItem('snake-highscore', score);
+                if (score > highscore) {
+                    highscore = score;
+                    localStorage.setItem('snake-highscore', score);
+                    highEl.innerText = highscore;
+                }
                 return;
             }
             // Food
@@ -390,7 +418,8 @@ document.addEventListener('DOMContentLoaded', () => {
         gameContainer.innerHTML = `
             <div class="memory-container">
                 <div class="memory-stats">
-                    <div class="stat-box">Moves: <span id="memory-moves">0</span></div>
+                    <div class="stat-box">Stage: <span id="memory-stage">1</span>/3</div>
+                    <div class="stat-box timer-box">Time: <span id="memory-timer">30.0</span>s</div>
                     <div class="stat-box">Matches: <span id="memory-matches">0</span> / 8</div>
                 </div>
                 <div class="memory-grid" id="memory-grid"></div>
@@ -402,11 +431,69 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function initMemoryLogic() {
-        const grid = document.getElementById('memory-grid'), movesEl = document.getElementById('memory-moves'), matchEl = document.getElementById('memory-matches'), resetBtn = document.getElementById('memory-reset'), status = document.getElementById('memory-status');
+        const grid = document.getElementById('memory-grid'), 
+              timerEl = document.getElementById('memory-timer'),
+              matchEl = document.getElementById('memory-matches'), 
+              stageEl = document.getElementById('memory-stage'),
+              resetBtn = document.getElementById('memory-reset'), 
+              status = document.getElementById('memory-status'),
+              celebOverlay = document.getElementById('celebration-overlay'),
+              closeCelebBtn = document.getElementById('btn-close-celebration');
+
         const icons = ['🎮', '🕹️', '👾', '🚀', '⭐', '💎', '🌈', '🔥'];
-        let cards = [...icons, ...icons].sort(() => Math.random() - 0.5), flipped = [], matches = 0, moves = 0, canFlip = true;
+        let cards = [], flipped = [], matches = 0, canFlip = true;
+        let timeLeft = 30, stage = 1, timerInterval = null;
+
+        function startTimer() {
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                timeLeft -= 0.1;
+                if (timeLeft <= 0) {
+                    timeLeft = 0;
+                    clearInterval(timerInterval);
+                    gameOver();
+                }
+                timerEl.innerText = timeLeft.toFixed(1);
+            }, 100);
+        }
+
+        function gameOver() {
+            canFlip = false;
+            status.innerText = "Time's Up! Game Over.";
+            status.style.color = "#ef4444";
+        }
+
+        function winStage() {
+            clearInterval(timerInterval);
+            if (stage < 3) {
+                stage++;
+                stageEl.innerText = stage;
+                timeLeft = stage === 2 ? 15 : 7.5;
+                status.innerText = `Stage ${stage-1} Clear! Get ready...`;
+                canFlip = false;
+                setTimeout(() => {
+                    status.innerText = "";
+                    create();
+                    startTimer();
+                }, 2000);
+            } else {
+                showCelebration();
+            }
+        }
+
+        function showCelebration() {
+            celebOverlay.classList.add('active');
+        }
+
+        closeCelebBtn.onclick = () => {
+            celebOverlay.classList.remove('active');
+            switchView('dashboard');
+        };
 
         function create() {
+            matches = 0;
+            matchEl.innerText = 0;
+            cards = [...icons, ...icons].sort(() => Math.random() - 0.5);
             grid.innerHTML = '';
             cards.forEach(icon => {
                 const el = document.createElement('div'); el.classList.add('memory-card');
@@ -415,21 +502,323 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (!canFlip || flipped.includes(el) || el.classList.contains('matched')) return;
                     el.classList.add('flipped'); flipped.push(el);
                     if (flipped.length === 2) {
-                        moves++; movesEl.innerText = moves; canFlip = false;
+                        canFlip = false;
                         if (flipped[0].querySelector('.card-back').innerText === flipped[1].querySelector('.card-back').innerText) {
                             flipped.forEach(c => c.classList.add('matched')); matches++; matchEl.innerText = matches; flipped = []; canFlip = true;
-                            if (matches === 8) status.innerText = `Congratulations!!! ${playerName}!`;
+                            if (matches === 8) winStage();
                         } else {
-                            setTimeout(() => { flipped.forEach(c => c.classList.remove('flipped')); flipped = []; canFlip = true; }, 1000);
+                            setTimeout(() => { flipped.forEach(c => c.classList.remove('flipped')); flipped = []; canFlip = true; }, 800);
                         }
                     }
                 });
                 grid.appendChild(el);
             });
+            canFlip = true;
         }
-        resetBtn.addEventListener('click', () => { moves = 0; matches = 0; movesEl.innerText = 0; matchEl.innerText = 0; status.innerText = ''; create(); });
+
+        resetBtn.addEventListener('click', () => { 
+            stage = 1; stageEl.innerText = 1;
+            timeLeft = 30; timerEl.innerText = "30.0";
+            status.innerText = ''; 
+            clearInterval(timerInterval);
+            create(); 
+            startTimer();
+        });
+
         create();
+        startTimer();
+
+        return () => { clearInterval(timerInterval); celebOverlay.classList.remove('active'); };
+    }
+
+    // --- MINES ---
+    function loadMines() {
+        gameContainer.innerHTML = `
+            <div class="mines-container">
+                <div class="mines-config">
+                    <div class="config-group">
+                        <label>Rows</label>
+                        <input type="number" id="mines-rows" value="10" min="5" max="20">
+                    </div>
+                    <div class="config-group">
+                        <label>Cols</label>
+                        <input type="number" id="mines-cols" value="10" min="5" max="20">
+                    </div>
+                    <div class="config-group">
+                        <label>Mines</label>
+                        <input type="number" id="mines-count" value="15" min="1" max="100">
+                    </div>
+                    <button id="mines-start" class="btn-play" style="width: auto; margin-top: auto; padding: 5px 15px;">New Game</button>
+                </div>
+                <div class="mines-header">
+                    <div class="stat-box">Mines: <span id="mines-left">15</span></div>
+                    <div id="mines-status" class="ttt-status"></div>
+                </div>
+                <div class="mines-grid" id="mines-grid"></div>
+            </div>
+        `;
+        currentGameCleanup = initMinesLogic();
+    }
+
+    function initMinesLogic() {
+        const gridEl = document.getElementById('mines-grid'),
+              statusEl = document.getElementById('mines-status'),
+              minesLeftEl = document.getElementById('mines-left'),
+              rowsInput = document.getElementById('mines-rows'),
+              colsInput = document.getElementById('mines-cols'),
+              minesInput = document.getElementById('mines-count'),
+              startBtn = document.getElementById('mines-start');
+
+        let rows, cols, mineCount, grid, revealedCount, gameOver, flaggedCells;
+
+        function init() {
+            rows = parseInt(rowsInput.value);
+            cols = parseInt(colsInput.value);
+            mineCount = Math.min(parseInt(minesInput.value), rows * cols - 1);
+            grid = []; revealedCount = 0; gameOver = false; flaggedCells = 0;
+            statusEl.innerText = '';
+            minesLeftEl.innerText = mineCount;
+
+            gridEl.style.gridTemplateColumns = `repeat(${cols}, 32px)`;
+            gridEl.innerHTML = '';
+
+            // Generate grid
+            for (let r = 0; r < rows; r++) {
+                grid[r] = [];
+                for (let c = 0; c < cols; c++) {
+                    const cell = {
+                        r, c, isMine: false, revealed: false, flagged: false, count: 0,
+                        el: document.createElement('div')
+                    };
+                    cell.el.classList.add('mines-cell');
+                    cell.el.addEventListener('click', () => reveal(r, c));
+                    cell.el.addEventListener('contextmenu', (e) => {
+                        e.preventDefault();
+                        toggleFlag(r, c);
+                    });
+                    gridEl.appendChild(cell.el);
+                    grid[r][c] = cell;
+                }
+            }
+
+            // Place mines
+            let placed = 0;
+            while (placed < mineCount) {
+                let r = Math.floor(Math.random() * rows);
+                let c = Math.floor(Math.random() * cols);
+                if (!grid[r][c].isMine) {
+                    grid[r][c].isMine = true;
+                    placed++;
+                    // Update counts
+                    for (let dr = -1; dr <= 1; dr++) {
+                        for (let dc = -1; dc <= 1; dc++) {
+                            if (grid[r + dr] && grid[r + dr][c + dc]) {
+                                grid[r + dr][c + dc].count++;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        function reveal(r, c) {
+            if (gameOver || grid[r][c].revealed || grid[r][c].flagged) return;
+            const cell = grid[r][c];
+            cell.revealed = true;
+            cell.el.classList.add('revealed');
+            revealedCount++;
+
+            if (cell.isMine) {
+                cell.el.classList.add('mine');
+                cell.el.innerText = '💣';
+                endGame(false);
+                return;
+            }
+
+            if (cell.count > 0) {
+                cell.el.innerText = cell.count;
+                cell.el.setAttribute('data-count', cell.count);
+            } else {
+                // Flood fill
+                for (let dr = -1; dr <= 1; dr++) {
+                    for (let dc = -1; dc <= 1; dc++) {
+                        if (grid[r + dr] && grid[r + dr][c + dc]) reveal(r + dr, c + dc);
+                    }
+                }
+            }
+
+            if (revealedCount === rows * cols - mineCount) endGame(true);
+        }
+
+        function toggleFlag(r, c) {
+            if (gameOver || grid[r][c].revealed) return;
+            const cell = grid[r][c];
+            cell.flagged = !cell.flagged;
+            cell.el.classList.toggle('flagged');
+            cell.el.innerText = cell.flagged ? '🚩' : '';
+            flaggedCells += cell.flagged ? 1 : -1;
+            minesLeftEl.innerText = mineCount - flaggedCells;
+        }
+
+        function endGame(won) {
+            gameOver = true;
+            statusEl.innerText = won ? 'WINNER!' : 'BOOM!';
+            statusEl.style.color = won ? '#10b981' : '#ef4444';
+            
+            // Show all mines
+            grid.forEach(row => row.forEach(cell => {
+                if (cell.isMine) {
+                    cell.el.classList.add('revealed');
+                    cell.el.innerText = '💣';
+                    if (!won) cell.el.classList.add('mine');
+                }
+            }));
+        }
+
+        startBtn.addEventListener('click', init);
+        init();
         return () => {};
+    }
+
+    // --- 2048 ---
+    function load2048() {
+        gameContainer.innerHTML = `
+            <div class="g2048-container">
+                <div class="g2048-stats">
+                    <div class="stat-box">Score: <span id="2048-score">0</span></div>
+                    <div class="stat-box">Best: <span id="2048-best">0</span></div>
+                </div>
+                <div class="g2048-grid" id="2048-grid">
+                    ${Array(16).fill(0).map(() => `<div class="g2048-cell"></div>`).join('')}
+                </div>
+                <div class="memory-controls">
+                    <button id="2048-reset" class="btn-secondary">New Game</button>
+                    <div id="2048-status" class="ttt-status"></div>
+                </div>
+            </div>
+        `;
+        currentGameCleanup = init2048Logic();
+    }
+
+    function init2048Logic() {
+        const gridEl = document.getElementById('2048-grid'),
+              scoreEl = document.getElementById('2048-score'),
+              bestEl = document.getElementById('2048-best'),
+              resetBtn = document.getElementById('2048-reset'),
+              statusEl = document.getElementById('2048-status');
+
+        let grid = Array(4).fill(0).map(() => Array(4).fill(0));
+        let score = 0;
+        let best = parseInt(localStorage.getItem('2048-best')) || 0;
+        bestEl.innerText = best;
+
+        function init() {
+            grid = Array(4).fill(0).map(() => Array(4).fill(0));
+            score = 0; scoreEl.innerText = 0;
+            statusEl.innerText = '';
+            addTile();
+            addTile();
+            updateUI();
+        }
+
+        function addTile() {
+            const empty = [];
+            for (let r = 0; r < 4; r++) {
+                for (let c = 0; c < 4; c++) {
+                    if (grid[r][c] === 0) empty.push({ r, c });
+                }
+            }
+            if (empty.length > 0) {
+                const { r, c } = empty[Math.floor(Math.random() * empty.length)];
+                grid[r][c] = Math.random() < 0.9 ? 2 : 4;
+                return { r, c };
+            }
+            return null;
+        }
+
+        function updateUI() {
+            const cells = gridEl.querySelectorAll('.g2048-cell');
+            grid.flat().forEach((val, i) => {
+                const cell = cells[i];
+                cell.innerText = val || '';
+                cell.className = 'g2048-cell';
+                if (val) {
+                    cell.classList.add(`tile-${val > 2048 ? 'super' : val}`);
+                }
+            });
+            scoreEl.innerText = score;
+            if (score > best) {
+                best = score;
+                bestEl.innerText = best;
+                localStorage.setItem('2048-best', best);
+            }
+        }
+
+        function slide(row) {
+            let filtered = row.filter(x => x !== 0);
+            for (let i = 0; i < filtered.length - 1; i++) {
+                if (filtered[i] === filtered[i + 1]) {
+                    filtered[i] *= 2;
+                    score += filtered[i];
+                    filtered.splice(i + 1, 1);
+                }
+            }
+            while (filtered.length < 4) filtered.push(0);
+            return filtered;
+        }
+
+        function rotate(matrix) {
+            return matrix[0].map((_, i) => matrix.map(row => row[i]).reverse());
+        }
+
+        function move(dir) {
+            let newGrid = [...grid.map(r => [...r])];
+            let rotationCount = 0;
+
+            if (dir === 'ArrowRight') rotationCount = 2;
+            else if (dir === 'ArrowUp') rotationCount = 3;
+            else if (dir === 'ArrowDown') rotationCount = 1;
+
+            for (let i = 0; i < rotationCount; i++) newGrid = rotate(newGrid);
+            
+            newGrid = newGrid.map(row => slide(row));
+
+            for (let i = 0; i < (4 - rotationCount) % 4; i++) newGrid = rotate(newGrid);
+
+            if (JSON.stringify(grid) !== JSON.stringify(newGrid)) {
+                grid = newGrid;
+                addTile();
+                updateUI();
+                if (isGameOver()) {
+                    statusEl.innerText = 'Game Over!';
+                    statusEl.style.color = '#ef4444';
+                }
+            }
+        }
+
+        function isGameOver() {
+            if (grid.flat().includes(0)) return false;
+            for (let r = 0; r < 4; r++) {
+                for (let c = 0; c < 3; c++) {
+                    if (grid[r][c] === grid[r][c+1]) return false;
+                    if (grid[c][r] === grid[c+1][r]) return false;
+                }
+            }
+            return true;
+        }
+
+        const handleKeys = (e) => {
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                e.preventDefault();
+                move(e.key);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeys);
+        resetBtn.addEventListener('click', init);
+        init();
+
+        return () => window.removeEventListener('keydown', handleKeys);
     }
 
     // --- ULTIMATE TIC-TAC-TOE ---
