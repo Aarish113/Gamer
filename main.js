@@ -144,7 +144,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     closeRules.addEventListener('click', () => rulesModal.classList.remove('active'));
-    window.addEventListener('click', (e) => { if (e.target === rulesModal) rulesModal.classList.remove('active'); });
+    window.addEventListener('click', (e) => { 
+        if (e.target === rulesModal) rulesModal.classList.remove('active'); 
+    });
 
     // --- TIC TAC TOE ---
     function loadTicTacToe() {
@@ -436,18 +438,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const playerO = document.getElementById('player-u-o');
 
         let currentPlayer = 'X';
-        let mainBoard = Array(9).fill(""); // Big board state
-        let smallBoards = Array(9).fill(0).map(() => Array(9).fill("")); // 9 Sub-boards
-        let activeBoardIndex = -1; // -1 means player can play anywhere
+        let mainBoard = Array(9).fill(""); 
+        let smallBoards = Array(9).fill(0).map(() => Array(9).fill("")); 
+        let activeBoardIndex = -1; 
         let gameActive = true;
 
-        const winLines = [
-            [0,1,2], [3,4,5], [6,7,8],
-            [0,3,6], [1,4,7], [2,5,8],
-            [0,4,8], [2,4,6]
-        ];
+        const winLines = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
 
         playerX.classList.add('active');
+        playerX.innerText = "Player (X)";
+        playerO.innerText = "CPU (O)";
 
         function checkWin(board) {
             for (let line of winLines) {
@@ -459,17 +459,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         function handleMove(boardIdx, cellIdx) {
-            if (!gameActive) return;
+            if (!gameActive || currentPlayer === 'O') return;
             if (activeBoardIndex !== -1 && boardIdx !== activeBoardIndex) return;
             if (smallBoards[boardIdx][cellIdx] !== "" || mainBoard[boardIdx] !== "") return;
 
-            // Make move
+            makeActualMove(boardIdx, cellIdx);
+            if (gameActive) setTimeout(makeAiMove, 600);
+        }
+
+        function makeActualMove(boardIdx, cellIdx) {
             smallBoards[boardIdx][cellIdx] = currentPlayer;
             const clickedCell = document.querySelector(`.ult-cell[data-board="${boardIdx}"][data-cell="${cellIdx}"]`);
             clickedCell.innerText = currentPlayer;
             clickedCell.classList.add(currentPlayer.toLowerCase());
 
-            // Check sub-board win
             const subWinner = checkWin(smallBoards[boardIdx]);
             if (subWinner && subWinner !== "draw") {
                 mainBoard[boardIdx] = subWinner;
@@ -477,42 +480,70 @@ document.addEventListener('DOMContentLoaded', () => {
                 boardEl.classList.add(`won-${subWinner.toLowerCase()}`);
                 boardEl.setAttribute('data-winner', subWinner);
             } else if (subWinner === "draw") {
-                mainBoard[boardIdx] = "D"; // Draw
+                mainBoard[boardIdx] = "D";
             }
 
-            // Check big board win
             const bigWinner = checkWin(mainBoard);
             if (bigWinner) {
                 gameActive = false;
-                if (bigWinner === "draw" || bigWinner === "D") {
-                    status.innerText = "Ultimate Draw!";
-                } else {
-                    status.innerText = `Ultimate Winner: Player ${bigWinner}!`;
-                }
+                status.innerText = bigWinner === "draw" || bigWinner === "D" ? "Ultimate Draw!" : `Winner: ${bigWinner === 'X' ? 'Player' : 'Computer'}!`;
                 document.querySelectorAll('.small-board').forEach(b => b.classList.remove('active'));
                 return;
             }
 
-            // Determine next active board
-            if (mainBoard[cellIdx] === "") {
-                activeBoardIndex = cellIdx;
-            } else {
-                activeBoardIndex = -1; // Next board is already won/full, play anywhere
-            }
-
-            // Update UI
+            activeBoardIndex = mainBoard[cellIdx] === "" ? cellIdx : -1;
             currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
             playerX.classList.toggle('active');
             playerO.classList.toggle('active');
 
             document.querySelectorAll('.small-board').forEach((b, i) => {
-                if (activeBoardIndex === -1 || i === activeBoardIndex) {
-                    if (mainBoard[i] === "") b.classList.add('active');
-                    else b.classList.remove('active');
-                } else {
-                    b.classList.remove('active');
-                }
+                if ((activeBoardIndex === -1 || i === activeBoardIndex) && mainBoard[i] === "") b.classList.add('active');
+                else b.classList.remove('active');
             });
+        }
+
+        function makeAiMove() {
+            if (!gameActive) return;
+            const move = getBestMove();
+            makeActualMove(move.boardIdx, move.cellIdx);
+        }
+
+        function getBestMove() {
+            const possibleMoves = [];
+            const targetBoards = activeBoardIndex === -1 ? 
+                mainBoard.reduce((acc, val, i) => val === "" ? acc.concat(i) : acc, []) : 
+                [activeBoardIndex];
+
+            for (let bIdx of targetBoards) {
+                for (let cIdx = 0; cIdx < 9; cIdx++) {
+                    if (smallBoards[bIdx][cIdx] === "") possibleMoves.push({boardIdx: bIdx, cellIdx: cIdx});
+                }
+            }
+
+            // Unbeatable AI simulation: prioritize winning sub-board, blocking player, or center control
+            // 1. Can win sub-board?
+            for (let m of possibleMoves) {
+                const temp = [...smallBoards[m.boardIdx]];
+                temp[m.cellIdx] = 'O';
+                if (checkWin(temp) === 'O') return m;
+            }
+
+            // 2. Must block player win?
+            for (let m of possibleMoves) {
+                const temp = [...smallBoards[m.boardIdx]];
+                temp[m.cellIdx] = 'X';
+                if (checkWin(temp) === 'X') return m;
+            }
+
+            // 3. Prefer center of sub-board and center of big-board
+            const centerMoves = possibleMoves.filter(m => m.cellIdx === 4);
+            if (centerMoves.length > 0) {
+                const centerMajor = centerMoves.find(m => m.boardIdx === 4);
+                if (centerMajor) return centerMajor;
+                return centerMoves[Math.floor(Math.random() * centerMoves.length)];
+            }
+
+            return possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
         }
 
         cells.forEach(cell => {
@@ -521,15 +552,11 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        // Initialize first move
         document.querySelectorAll('.small-board').forEach(b => b.classList.add('active'));
-
-        resetBtn.addEventListener('click', () => {
-            loadUltimateTTT();
-        });
-
+        resetBtn.addEventListener('click', () => loadUltimateTTT());
         return () => {};
     }
+
 
     // --- TETRIS ---
     function loadTetris() {
