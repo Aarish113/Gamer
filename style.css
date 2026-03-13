@@ -977,12 +977,23 @@ header p {
         align-items: center;
         border-right: none;
         border-bottom: 1px solid var(--glass-border);
+        overflow-x: auto;
+        white-space: nowrap;
     }
     .logo {
         margin-bottom: 0;
+        margin-right: 20px;
     }
     .nav-links {
-        display: none; /* Hide nav links on mobile dashboard, use game cards */
+        display: flex;
+        flex-direction: row;
+        gap: 15px;
+    }
+    .nav-links li {
+        width: auto;
+        margin-bottom: 0;
+        padding: 10px 15px;
+        white-space: nowrap;
     }
     main {
         padding: 20px;
@@ -1171,4 +1182,524 @@ header p {
 
 .tile-merged {
     animation: tileMerge 0.15s ease-out;
+}
+
+/* --- TETRIS v2 --- */
+.tetris-wrapper-v2 {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    padding: 20px;
+    font-family: 'Press Start 2P', monospace;
+}
+
+.tetris-side-v2 {
+    width: 160px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.tetris-wrapper-v2 .panel-box {
+    background: #0f0f1a;
+    border: 1px solid #1a1a2e;
+    padding: 14px;
+    position: relative;
+    clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+}
+
+.tetris-wrapper-v2 .panel-box::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(0,245,255,0.03) 0%, transparent 60%);
+}
+
+.tetris-wrapper-v2 .panel-label {
+    font-size: 7px;
+    color: #00f5ff;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    text-shadow: 0 0 8px #00f5ff;
+}
+
+.tetris-wrapper-v2 .panel-value {
+    font-size: 13px;
+    color: #e0e0ff;
+    text-shadow: 0 0 10px rgba(224,224,255,0.5);
+    word-break: break-all;
+}
+
+.tetris-middle-v2 {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.tetris-title-v2 {
+    text-align: center;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 900;
+    font-size: 28px;
+    letter-spacing: 12px;
+    margin-bottom: 14px;
+    background: linear-gradient(90deg, #00f5ff, #ff006e, #00f5ff);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: shimmer 3s linear infinite;
+    text-shadow: none;
+    filter: drop-shadow(0 0 20px rgba(0,245,255,0.4));
+}
+
+@keyframes shimmer {
+    0% { background-position: 0% center; }
+    100% { background-position: 200% center; }
+}
+
+.tetris-wrapper-v2 canvas {
+    display: block;
+    image-rendering: pixelated;
+}
+
+.tetris-wrapper-v2 .canvas-wrapper {
+    position: relative;
+    border: 1px solid rgba(0,245,255,0.2);
+    box-shadow:
+      0 0 0 1px rgba(0,245,255,0.05),
+      0 0 30px rgba(0,245,255,0.08),
+      inset 0 0 30px rgba(0,0,0,0.5);
+}
+
+.tetris-wrapper-v2 .canvas-corner {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border-color: #00f5ff;
+    border-style: solid;
+    opacity: 0.8;
+}
+.tetris-wrapper-v2 .canvas-corner.tl { top: -1px; left: -1px; border-width: 2px 0 0 2px; }
+.tetris-wrapper-v2 .canvas-corner.tr { top: -1px; right: -1px; border-width: 2px 2px 0 0; }
+.tetris-wrapper-v2 .canvas-corner.bl { bottom: -1px; left: -1px; border-width: 0 0 2px 2px; }
+.tetris-wrapper-v2 .canvas-corner.br { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; }
+
+#t2-next-canvas {
+    display: block;
+    image-rendering: pixelated;
+}
+
+.tetris-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(10,10,15,0.92);
+    backdrop-filter: blur(4px);
+    z-index: 10;
+    gap: 20px;
+}
+
+.tetris-wrapper-v2 .overlay-title {
+    font-family: 'Outfit', sans-serif;
+    font-size: 22px;
+    font-weight: 900;
+    color: #00f5ff;
+    text-shadow: 0 0 20px #00f5ff, 0 0 40px rgba(0,245,255,0.4);
+    letter-spacing: 4px;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.tetris-wrapper-v2 .overlay-sub {
+    font-size: 8px;
+    color: #4a4a6a;
+    letter-spacing: 2px;
+    line-height: 1.8;
+    text-align: center;
+}
+
+.tetris-wrapper-v2 .overlay-sub span {
+    color: #ffbe0b;
+    text-shadow: 0 0 8px #ffbe0b;
+}
+
+.t2-start-btn {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    padding: 12px 24px;
+    background: transparent;
+    border: 1px solid #00f5ff;
+    color: #00f5ff;
+    cursor: pointer;
+    letter-spacing: 2px;
+    position: relative;
+    clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px));
+    transition: all 0.2s;
+    text-shadow: 0 0 10px #00f5ff;
+    box-shadow: 0 0 15px rgba(0,245,255,0.2), inset 0 0 15px rgba(0,245,255,0.05);
+}
+
+.t2-start-btn:hover {
+    background: rgba(0,245,255,0.1);
+    box-shadow: 0 0 25px rgba(0,245,255,0.4), inset 0 0 20px rgba(0,245,255,0.1);
+}
+
+.tetris-wrapper-v2 .controls-hint {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.tetris-wrapper-v2 .ctrl-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 7px;
+    color: #4a4a6a;
+}
+
+.tetris-wrapper-v2 .key {
+    background: #1a1a2e;
+    border: 1px solid #4a4a6a;
+    padding: 3px 6px;
+    font-size: 7px;
+    color: #e0e0ff;
+    min-width: 26px;
+    text-align: center;
+}
+
+.tetris-wrapper-v2 .level-bar-bg {
+    background: #1a1a2e;
+    height: 6px;
+    margin-top: 8px;
+    position: relative;
+    overflow: hidden;
+}
+
+.tetris-wrapper-v2 .level-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #00f5ff, #ff006e);
+    transition: width 0.4s ease;
+    box-shadow: 0 0 8px #00f5ff;
+}
+
+.tetris-wrapper-v2 .score-flash {
+    animation: scoreFlash 0.3s ease;
+}
+
+@keyframes scoreFlash {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.3); color: #ffbe0b; text-shadow: 0 0 15px #ffbe0b; }
+    100% { transform: scale(1); }
+}
+
+.tetris-wrapper-v2 .lines-cleared-popup {
+    position: absolute;
+    pointer-events: none;
+    font-size: 9px;
+    color: #ffbe0b;
+    text-shadow: 0 0 10px #ffbe0b;
+    z-index: 20;
+    animation: popUp 1s ease forwards;
+    white-space: nowrap;
+}
+
+@keyframes popUp {
+    0% { opacity: 1; transform: translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateY(-40px) scale(1.3); }
+}
+
+/* Tetris Mobile Controls Container */
+.mobile-tetris-controls {
+    display: none;
+    width: 100%;
+    margin-top: 20px;
+    justify-content: center;
+    gap: 10px;
+}
+
+.t-ctrl-btn {
+    width: 50px;
+    height: 50px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    color: white;
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(5px);
+    transition: all 0.2s;
+}
+
+.t-ctrl-btn:active {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(0.9);
+}
+
+@media (max-width: 768px) {
+    .tetris-wrapper-v2 {
+        flex-direction: column;
+        align-items: center;
+        padding: 0px;
+    }
+    
+    .tetris-side-v2 {
+        display: none; /* Hide side panels on restricted screen sizes */
+    }
+
+    .mobile-tetris-controls {
+        display: flex; /* Show the mobile buttons only on small screens */
+    }
+
+    #t2-game-canvas {
+        width: 100%;
+        max-width: 300px;
+        height: auto; 
+    }
+}
+
+/* Loss Overlay */
+.loss-overlay {
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(circle, rgba(153, 0, 0, 0.9) 0%, rgba(20, 0, 0, 0.95) 100%);
+    backdrop-filter: blur(15px);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    text-align: center;
+}
+
+.loss-overlay.active {
+    display: flex;
+    animation: fadeIn 0.5s ease forwards;
+}
+
+.loss-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+.glitch {
+    font-size: 4rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    position: relative;
+    color: white;
+    text-shadow: 0.05em 0 0 red, -0.05em -0.025em 0 rgba(0,255,0,0.7), -0.025em 0.05em 0 blue;
+    animation: glitch 1s infinite alternate;
+}
+
+@keyframes glitch {
+    0% { text-shadow: 0.05em 0 0 red, -0.05em -0.025em 0 rgba(0,255,0,0.7), -0.025em 0.05em 0 blue; }
+    100% { text-shadow: -0.05em -0.025em 0 red, 0.025em 0.025em 0 rgba(0,255,0,0.7), -0.05em -0.05em 0 blue; }
+}
+
+.loss-declaration {
+    font-size: 3rem;
+    color: #ef4444;
+    text-shadow: 0 0 20px rgba(239, 68, 68, 0.8);
+    font-weight: 900;
+    margin: 10px 0;
+}
+
+#loss-subtext {
+    font-size: 1.5rem;
+    color: #f8fafc;
+    margin-bottom: 30px;
+}
+
+.error-text {
+    color: #ef4444;
+    font-size: 1rem;
+    font-weight: 700;
+    margin-top: 15px;
+    text-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+    animation: shake 0.4s ease-in-out;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-10px); }
+    50% { transform: translateX(10px); }
+    75% { transform: translateX(-10px); }
+}
+
+@media (max-width: 768px) {
+    .glitch { font-size: 2.5rem; }
+    .loss-declaration { font-size: 2rem; }
+    #loss-subtext { font-size: 1.2rem; }
+}
+
+/* --- SAFE CROSSING 3D --- */
+#safe-crossing-container {
+    position: relative;
+    width: 600px;
+    height: 660px;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.8), 0 0 20px rgba(78, 205, 196, 0.1);
+    border: 4px solid #2C3E50;
+    background: #000;
+    margin: 0 auto;
+}
+
+#sc-canvas-container {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.sc-ui-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    z-index: 5;
+}
+
+.sc-top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 25px;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.9), rgba(0,0,0,0));
+}
+
+.sc-stat {
+    font-family: 'Fredoka One', cursive;
+    font-size: 22px;
+    text-shadow: 2px 2px 0 #000;
+    color: #F8B500;
+    flex: 1;
+}
+
+.sc-stat:first-child { text-align: left; }
+.sc-stat:nth-child(2) { text-align: center; color: #4ECDC4; font-size: 18px; }
+.sc-stat:last-child { text-align: right; }
+
+#sc-lives {
+    color: #FF2E63;
+    letter-spacing: 2px;
+}
+
+.sc-controls-hint {
+    text-align: center;
+    padding-bottom: 25px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.8);
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.9);
+    letter-spacing: 1px;
+}
+
+.sc-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(13, 17, 23, 0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto;
+    z-index: 10;
+}
+
+.sc-overlay h1 {
+    font-family: 'Fredoka One', cursive;
+    font-size: 3.5rem;
+    color: #4ECDC4;
+    margin-bottom: 15px;
+    text-shadow: 0 5px 15px rgba(0,0,0,0.8);
+    letter-spacing: 2px;
+    text-align: center;
+}
+
+.sc-overlay .text-danger {
+    color: #FF2E63;
+}
+
+.sc-overlay p {
+    font-size: 1.2rem;
+    margin-bottom: 30px;
+    color: #E0E0E0;
+    font-weight: bold;
+}
+
+.sc-difficulty-selection {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 40px;
+}
+
+.sc-diff-btn {
+    padding: 12px 24px;
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.1rem;
+    color: #aaa;
+    background: rgba(255,255,255,0.05);
+    border: 2px solid #555;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    outline: none;
+}
+
+.sc-diff-btn:hover {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+    border-color: #888;
+}
+
+.sc-diff-btn.selected {
+    background: #4ECDC4;
+    color: #1A1A2E;
+    border-color: #4ECDC4;
+    box-shadow: 0 0 15px rgba(78, 205, 196, 0.5);
+}
+
+.sc-btn {
+    padding: 18px 50px;
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.6rem;
+    color: #fff;
+    background: linear-gradient(45deg, #FF2E63, #FF8C42);
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    box-shadow: 0 5px 15px rgba(255, 46, 99, 0.4);
+    transition: all 0.2s ease;
+}
+
+.sc-btn:hover {
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 8px 25px rgba(255, 46, 99, 0.6);
+}
+
+.sc-btn:active {
+    transform: translateY(2px) scale(0.95);
+}
+
+@media (max-width: 768px) {
+    #safe-crossing-container {
+        width: 100%;
+        height: 60vh;
+    }
 }

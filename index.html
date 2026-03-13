@@ -9,6 +9,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
     <div class="background-overlay"></div>
@@ -25,6 +27,7 @@
                 <input type="text" id="player-name-input" placeholder="Your Name" autocomplete="off">
                 <button id="btn-start-playing" class="btn-play">Let's Play</button>
             </div>
+            <div id="name-error-msg" class="error-text" style="display: none;"></div>
         </div>
     </div>
 
@@ -44,6 +47,7 @@
                 <li data-view="2048">2048</li>
                 <li data-view="tetris">Tetris</li>
                 <li data-view="ultimate-ttt">Ultimate TTT</li>
+                <li data-view="safe-crossing">Safe Crossing</li>
             </ul>
         </nav>
 
@@ -112,6 +116,14 @@
                             <button class="btn-play">Play Now</button>
                         </div>
                     </div>
+                    <div class="game-card" data-game="safe-crossing">
+                        <div class="card-image safe-preview" style="background: linear-gradient(135deg, #1A1A2E, #4ECDC4);"></div>
+                        <div class="card-content">
+                            <h3>Safe Crossing</h3>
+                            <p>Dodge cars, cross rivers, shoot traffic!</p>
+                            <button class="btn-play">Play Now</button>
+                        </div>
+                    </div>
                 </div>
             </section>
 
@@ -148,6 +160,16 @@
             <h2 id="congrats-text">CONGRATULATIONS!</h2>
             <p id="congrats-subtext">You are a Master of Memory!</p>
             <button id="btn-close-celebration" class="btn-secondary">Back to Dashboard</button>
+        </div>
+    </div>
+
+    <!-- Loss Overlay -->
+    <div id="loss-overlay" class="loss-overlay">
+        <div class="loss-content">
+            <h2 class="glitch" data-text="YO BUGGER!">YO BUGGER!</h2>
+            <h1 class="loss-declaration">YOU LOST. DAMN YOU!!!</h1>
+            <p id="loss-subtext">Better luck next time, loser.</p>
+            <button id="btn-close-loss" class="btn-secondary">Walk of Shame to Dashboard</button>
         </div>
     </div>
 
