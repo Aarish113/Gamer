@@ -191,6 +191,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 gameTitle.innerText = 'Ultimate Tic-Tac-Toe';
                 loadUltimateTTT();
                 break;
+            case 'safe-crossing':
+                gameTitle.innerText = 'Safe Crossing';
+                loadSafeCrossing();
+                break;
             default:
                 console.error('Unknown game ID:', gameId);
         }
