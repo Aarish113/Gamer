@@ -9,6 +9,11 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentGameCleanup = null;
     let playerName = "Player"; // Default
 
+    // Device detection utility
+    function isMobileDevice() {
+        return ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || window.matchMedia('(pointer: coarse)').matches;
+    }
+
     // Global Celebration Helper
     const celebOverlay = document.getElementById('celebration-overlay');
     const celebSubtext = document.getElementById('congrats-subtext');
@@ -210,57 +215,77 @@ document.addEventListener('DOMContentLoaded', () => {
     let activeGameId = '';
 
     const GAME_RULES = {
-        'tic-tac-toe': `
+        'tic-tac-toe': () => `
             <ul>
                 <li>Players take turns placing X or O in a 3x3 grid.</li>
                 <li>First player to get three in a row wins.</li>
                 <li>Play locally or against the computer (named POWER) using Minimax AI.</li>
+                ${isMobileDevice() ? '<li>Tap a cell to make your move.</li>' : '<li>Click a cell to make your move.</li>'}
             </ul>
         `,
-        'snake': `
+        'snake': () => `
             <ul>
-                <li>Use arrow keys to control the snake.</li>
-                <li>Eat red food to grow and earn points.</li>
+                <li>Eat red food to grow longer and earn points.</li>
                 <li>Avoid hitting walls or yourself!</li>
+                ${isMobileDevice()
+                    ? '<li>🕹️ <strong>Mobile:</strong> Swipe in the direction you want to go.</li>'
+                    : '<li>⌨️ Use <strong>Arrow Keys</strong> to steer the snake.</li>'}
             </ul>
         `,
-        'memory': `
+        'memory': () => `
             <ul>
-                <li>Flip two cards to find matches.</li>
+                <li>Flip two cards to find matching pairs.</li>
                 <li>Stage 1: 30s | Stage 2: 15s | Stage 3: 7.5s</li>
                 <li>Beat all 3 stages to win the game!</li>
+                ${isMobileDevice() ? '<li>Tap any card to flip it.</li>' : '<li>Click any card to flip it.</li>'}
             </ul>
         `,
-        'mines': `
+        'mines': () => `
             <ul>
                 <li>Clear the grid without hitting a mine!</li>
                 <li>Numbers show how many mines are adjacent.</li>
-                <li>Right-click to flag potential mines.</li>
+                ${isMobileDevice()
+                    ? '<li>📱 <strong>Mobile:</strong> Tap to reveal. Long-press to flag a mine.</li>'
+                    : '<li>Right-click to flag potential mines.</li>'}
                 <li>Customizable grid size and mine count.</li>
             </ul>
         `,
-        '2048': `
+        '2048': () => `
             <ul>
-                <li>Use Arrow Keys to slide tiles.</li>
-                <li>When two tiles with the same number touch, they merge into one!</li>
+                <li>When two tiles with the same number touch, they merge!</li>
                 <li>Reach the 2048 tile to win!</li>
-                <li>Continue playing to reach the highest score possible.</li>
+                ${isMobileDevice()
+                    ? '<li>👆 <strong>Mobile:</strong> Swipe Up / Down / Left / Right to slide tiles.</li>'
+                    : '<li>⌨️ Use <strong>Arrow Keys</strong> to slide tiles.</li>'}
+                <li>Continue playing to beat your highest score.</li>
             </ul>
         `,
-        'tetris': `
+        'tetris': () => `
             <ul>
-                <li>Stack blocks to clear horizontal lines.</li>
-                <li>Use Arrow Keys to move and rotate pieces.</li>
-                <li>Spacebar for a Hard Drop.</li>
+                <li>Stack blocks to clear horizontal lines and score points.</li>
                 <li>Level increases every 10 lines!</li>
+                ${isMobileDevice()
+                    ? '<li>📱 <strong>Mobile:</strong> Use the on-screen buttons to move, rotate, and drop pieces.</li>'
+                    : '<li>⬅️➡️ Arrow Keys to move | ⬆️ Rotate | ⬇️ Soft Drop | Space Hard Drop | P to Pause</li>'}
             </ul>
         `,
-        'ultimate-ttt': `
+        'ultimate-ttt': () => `
             <ul>
-                <li>A game of Tic-Tac-Toe where each square is a smaller 3x3 board.</li>
-                <li>Your move in a small board determines which small board your opponent plays next.</li>
-                <li>Win three small boards in a row to win the game!</li>
-                <li>High-level strategy meets recursion.</li>
+                <li>Each large square is a full Tic-Tac-Toe board.</li>
+                <li>Your move determines which board your opponent plays in next.</li>
+                <li>Win 3 small boards in a row to win the game!</li>
+                ${isMobileDevice() ? '<li>Tap a cell to make your move.</li>' : '<li>Click a cell to make your move.</li>'}
+            </ul>
+        `,
+        'safe-crossing': () => `
+            <ul>
+                <li>Cross the road without getting hit by cars!</li>
+                <li>Jump on logs to cross the river — don't fall in!</li>
+                <li>Reach the far side to level up and earn bonus points.</li>
+                ${isMobileDevice()
+                    ? '<li>📱 <strong>Mobile:</strong> Use the D-pad to move. Tap 🔫 to shoot a car and slow it down!</li>'
+                    : '<li>⌨️ <strong>Desktop:</strong> WASD or Arrow Keys to move. Click to aim and shoot cars.</li>'}
+                <li>You have 3 lives — lose them all and it\'s game over!</li>
             </ul>
         `
     };
@@ -268,7 +293,8 @@ document.addEventListener('DOMContentLoaded', () => {
     btnRules.addEventListener('click', () => {
         if (!activeGameId) return;
         rulesTitle.innerText = `${gameTitle.innerText} Rules`;
-        rulesContent.innerHTML = GAME_RULES[activeGameId] || "Rules coming soon...";
+        const rule = GAME_RULES[activeGameId];
+        rulesContent.innerHTML = rule ? (typeof rule === 'function' ? rule() : rule) : "Rules coming soon...";
         rulesModal.classList.add('active');
     });
 
@@ -776,6 +802,26 @@ document.addEventListener('DOMContentLoaded', () => {
                         e.preventDefault();
                         toggleFlag(r, c);
                     });
+
+                    // Mobile long-press for flagging
+                    let pressTimer;
+                    cell.el.addEventListener('touchstart', (e) => {
+                        if (grid[r][c].revealed) return;
+                        pressTimer = setTimeout(() => {
+                            toggleFlag(r, c);
+                            // Vibrate if supported for feedback
+                            if (navigator.vibrate) navigator.vibrate(50);
+                        }, 500);
+                    }, {passive: true});
+
+                    cell.el.addEventListener('touchend', () => {
+                        clearTimeout(pressTimer);
+                    }, {passive: true});
+
+                    cell.el.addEventListener('touchmove', () => {
+                        clearTimeout(pressTimer);
+                    }, {passive: true});
+
                     gridEl.appendChild(cell.el);
                     grid[r][c] = cell;
                 }
@@ -880,6 +926,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="memory-controls">
                     <button id="2048-reset" class="btn-secondary">New Game</button>
                     <div id="2048-status" class="ttt-status"></div>
+                </div>
+                <div class="sc-controls-hint" style="margin-top:20px;">
+                    ${isMobileDevice() ? '👆 Swipe to slide tiles' : '⌨️ Use Arrow Keys to slide'}
                 </div>
             </div>
         `;
@@ -1018,20 +1067,17 @@ document.addEventListener('DOMContentLoaded', () => {
             let dxTouch = touchEndX - touchStartX;
             let dyTouch = touchEndY - touchStartY;
             
-            if (Math.abs(dxTouch) > Math.abs(dyTouch)) {
-                if (dxTouch > 30) move('ArrowRight');
-                else if (dxTouch < -30) move('ArrowLeft');
+            let dx = touchEndX - touchStartX;
+            let dy = touchEndY - touchStartY;
+            if (Math.abs(dx) > Math.abs(dy)) {
+                if (Math.abs(dx) > 30) move(dx > 0 ? 'ArrowRight' : 'ArrowLeft');
             } else {
-                if (dyTouch > 30) move('ArrowDown');
-                else if (dyTouch < -30) move('ArrowUp');
+                if (Math.abs(dy) > 30) move(dy > 0 ? 'ArrowDown' : 'ArrowUp');
             }
         }, {passive: true});
 
-        window.addEventListener('keydown', handleKeys);
-        resetBtn.addEventListener('click', init);
         init();
-
-        return () => window.removeEventListener('keydown', handleKeys);
+        return () => window.removeEventListener('keydown', handleKey);
     }
 
     // --- ULTIMATE TIC-TAC-TOE ---
@@ -1399,8 +1445,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="overlay-title" id="t2-overlay-title">TETRIS</div>
                     <div class="overlay-sub" id="t2-overlay-sub">
                       A classic returns<br><br>
-                      <span>←→</span> Move &nbsp; <span>↑</span> Rotate<br>
-                      <span>↓</span> Soft drop &nbsp; <span>SPC</span> Hard drop
+                      ${isMobileDevice() 
+                        ? 'Use on-screen buttons to control the game'
+                        : '<span>←→</span> Move &nbsp; <span>↑</span> Rotate<br><span>↓</span> Soft drop &nbsp; <span>SPC</span> Hard drop'
+                      }
                     </div>
                     <button class="t2-start-btn" id="t2-start-btn">START GAME</button>
                   </div>
@@ -1799,6 +1847,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- SAFE CROSSING ---
     function loadSafeCrossing() {
+        const mobile = isMobileDevice();
         gameContainer.innerHTML = `
             <div id="safe-crossing-container">
                 <div id="sc-canvas-container"></div>
@@ -1808,7 +1857,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="sc-stat text-center">MODE: <span id="sc-currentDifficulty">MEDIUM</span></div>
                         <div class="sc-stat"><span id="sc-lives">❤️❤️❤️</span></div>
                     </div>
-                    <div class="sc-controls-hint">Move: WASD / Arrows &nbsp;|&nbsp; Aim & Shoot: MOUSE</div>
+                    <div class="sc-controls-hint">${mobile
+                        ? '🕹️ D-Pad to move &nbsp;|&nbsp; Tap 🔫 to shoot'
+                        : 'Move: WASD / Arrows &nbsp;|&nbsp; Aim &amp; Shoot: MOUSE'
+                    }</div>
                 </div>
                 
                 <div class="sc-overlay" id="sc-startScreen">
@@ -1822,6 +1874,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
 
                     <button class="sc-btn" id="sc-startBtn">START GAME</button>
+                </div>
+
+                <!-- Mobile D-Pad + Shoot button -->
+                <div id="sc-touch-controls"${mobile ? ' class="visible"' : ''}>
+                    <div class="sc-dpad">
+                        <div class="sc-dpad-center"></div>
+                        <button class="sc-dpad-btn" id="sc-btn-up">▲</button>
+                        <div class="sc-dpad-center"></div>
+                        <button class="sc-dpad-btn" id="sc-btn-left">◀</button>
+                        <div class="sc-dpad-center"></div>
+                        <button class="sc-dpad-btn" id="sc-btn-right">▶</button>
+                        <div class="sc-dpad-center"></div>
+                        <button class="sc-dpad-btn" id="sc-btn-down">▼</button>
+                        <div class="sc-dpad-center"></div>
+                    </div>
+                    <button class="sc-shoot-btn" id="sc-btn-shoot">🔫</button>
                 </div>
             </div>
         `;
@@ -2161,6 +2229,43 @@ document.addEventListener('DOMContentLoaded', () => {
 
         window.addEventListener('keydown', handleKeys);
         renderer.domElement.addEventListener('mousedown', handleClick);
+
+        // Mobile D-Pad controls
+        const btnUp    = document.getElementById('sc-btn-up');
+        const btnDown  = document.getElementById('sc-btn-down');
+        const btnLeft  = document.getElementById('sc-btn-left');
+        const btnRight = document.getElementById('sc-btn-right');
+        const btnShoot = document.getElementById('sc-btn-shoot');
+
+        function scMobileMove(key) {
+            handleKeys({ key, preventDefault: () => {} });
+        }
+
+        function scMobileShoot() {
+            if (!gameStarted || gameOver || player.isDead || player.cooldown > 0) return;
+            // Shoot forward (in the direction the player is facing: negative Z axis)
+            const dir = new THREE.Vector3(0, 0, -1).normalize();
+            const projGeo = new THREE.SphereGeometry(0.2);
+            const proj = new THREE.Mesh(projGeo, MAT.projectile);
+            proj.position.copy(playerGroup.position);
+            proj.position.y = 0.5;
+            scene.add(proj);
+            projectiles.push({ mesh: proj, dir: dir, life: 60 });
+            player.cooldown = 15;
+        }
+
+        if (btnUp)    btnUp.addEventListener('touchstart',    (e) => { e.preventDefault(); scMobileMove('w'); }, { passive: false });
+        if (btnDown)  btnDown.addEventListener('touchstart',  (e) => { e.preventDefault(); scMobileMove('s'); }, { passive: false });
+        if (btnLeft)  btnLeft.addEventListener('touchstart',  (e) => { e.preventDefault(); scMobileMove('a'); }, { passive: false });
+        if (btnRight) btnRight.addEventListener('touchstart', (e) => { e.preventDefault(); scMobileMove('d'); }, { passive: false });
+        if (btnShoot) btnShoot.addEventListener('touchstart', (e) => { e.preventDefault(); scMobileShoot(); }, { passive: false });
+
+        // Also support click for testing on desktop
+        if (btnUp)    btnUp.addEventListener('click',    () => scMobileMove('w'));
+        if (btnDown)  btnDown.addEventListener('click',  () => scMobileMove('s'));
+        if (btnLeft)  btnLeft.addEventListener('click',  () => scMobileMove('a'));
+        if (btnRight) btnRight.addEventListener('click', () => scMobileMove('d'));
+        if (btnShoot) btnShoot.addEventListener('click', () => scMobileShoot());
 
         return () => {
             gameStarted = false;
