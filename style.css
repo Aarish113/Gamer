@@ -480,8 +480,9 @@ header p {
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid var(--glass-border);
     border-radius: 20px;
-    width: 480px;
-    height: 480px;
+    width: min(480px, 95vw);
+    height: min(480px, 95vw);
+    aspect-ratio: 1;
 }
 
 .small-board {
@@ -802,8 +803,8 @@ header p {
 
 .ttt-board {
     display: grid;
-    grid-template-columns: repeat(3, 100px);
-    grid-template-rows: repeat(3, 100px);
+    grid-template-columns: repeat(3, min(100px, 28vw));
+    grid-template-rows: repeat(3, min(100px, 28vw));
     gap: 15px;
 }
 
@@ -1048,10 +1049,93 @@ header p {
 }
 
 /* TTT AI Mode Selection */
+/* UTTT AI Difficulty Selection */
 .ttt-modes {
     display: flex;
-    gap: 15px;
-    margin-bottom: 10px;
+    justify-content: center;
+    gap: 12px;
+    margin: 15px 0 25px 0;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 16px;
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(5px);
+}
+
+.diff-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    color: var(--text-muted);
+    padding: 10px 20px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.diff-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        120deg,
+        transparent,
+        rgba(255, 255, 255, 0.1),
+        transparent
+    );
+    transition: 0.5s;
+}
+
+.diff-btn:hover::before {
+    left: 100%;
+}
+
+.diff-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    transform: translateY(-2px);
+}
+
+/* Specific Difficulty Themes */
+.diff-btn[data-diff="easy"].active {
+    background: rgba(16, 185, 129, 0.2);
+    border-color: #10b981;
+    color: #10b981;
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.3), inset 0 0 10px rgba(16, 185, 129, 0.2);
+}
+
+.diff-btn[data-diff="medium"].active {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: #3b82f6;
+    color: #3b82f6;
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3), inset 0 0 10px rgba(59, 130, 246, 0.2);
+}
+
+.diff-btn[data-diff="hard"].active {
+    background: rgba(245, 158, 11, 0.2);
+    border-color: #f59e0b;
+    color: #f59e0b;
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.3), inset 0 0 10px rgba(245, 158, 11, 0.2);
+}
+
+.diff-btn[data-diff="impossible"].active {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: #ef4444;
+    color: #ef4444;
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.3), inset 0 0 10px rgba(239, 68, 68, 0.2);
+}
+
+.diff-btn.active {
+    transform: scale(1.05);
+    filter: brightness(1.2);
 }
 
 .mode-btn {
@@ -1829,3 +1913,5 @@ header p {
 .sc-shoot-btn:active {
     background: rgba(255, 46, 99, 0.5);
 }
+
+@media (max-width: 768px) { .ult-ttt-board { gap: 8px !important; padding: 8px !important; width: 95vw !important; height: 95vw !important; } .small-board { gap: 2px !important; padding: 4px !important; } .small-board.won-x::after, .small-board.won-o::after { font-size: 2.5rem !important; } .ult-cell { font-size: 1rem !important; } }

@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let currentGameCleanup = null;
     let playerName = "Player"; // Default
+    let currentUTTTDifficulty = 'easy'; // Global for UTTT difficulty
 
     // Device detection utility
     function isMobileDevice() {
@@ -1084,6 +1085,12 @@ document.addEventListener('DOMContentLoaded', () => {
     function loadUltimateTTT() {
         gameContainer.innerHTML = `
             <div class="ult-ttt-container">
+                <div class="ttt-modes">
+                    <button class="diff-btn ${currentUTTTDifficulty === 'easy' ? 'active' : ''}" data-diff="easy">Easy</button>
+                    <button class="diff-btn ${currentUTTTDifficulty === 'medium' ? 'active' : ''}" data-diff="medium">Medium</button>
+                    <button class="diff-btn ${currentUTTTDifficulty === 'hard' ? 'active' : ''}" data-diff="hard">Hard</button>
+                    <button class="diff-btn ${currentUTTTDifficulty === 'impossible' ? 'active' : ''}" data-diff="impossible">Impossible</button>
+                </div>
                 <div class="ttt-info">
                     <div class="player-indicator" id="player-u-x">Player X</div>
                     <div class="player-indicator" id="player-u-o">Player O</div>
@@ -1111,6 +1118,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const resetBtn = document.getElementById('ult-reset');
         const playerX = document.getElementById('player-u-x');
         const playerO = document.getElementById('player-u-o');
+        const diffBtns = document.querySelectorAll('.diff-btn');
 
         let currentPlayer = 'X';
         let mainBoard = Array(9).fill(""); 
@@ -1119,6 +1127,13 @@ document.addEventListener('DOMContentLoaded', () => {
         let gameActive = true;
 
         const winLines = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+
+        diffBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                currentUTTTDifficulty = btn.dataset.diff;
+                loadUltimateTTT(); 
+            });
+        });
 
         playerX.classList.add('active');
         playerX.innerText = "Player (X)";
@@ -1193,7 +1208,14 @@ document.addEventListener('DOMContentLoaded', () => {
             // Run MCTS in a timeout to allow UI update
             setTimeout(() => {
                 if (!gameActive) return;
-                const move = mctsSearch(mainBoard, smallBoards, activeBoardIndex, 'O', 600);
+                
+                let iterations = 200;
+                if (currentUTTTDifficulty === 'easy') iterations = 25;
+                else if (currentUTTTDifficulty === 'medium') iterations = 200;
+                else if (currentUTTTDifficulty === 'hard') iterations = 1000;
+                else if (currentUTTTDifficulty === 'impossible') iterations = 5000;
+
+                const move = mctsSearch(mainBoard, smallBoards, activeBoardIndex, 'O', 800, iterations);
                 status.innerText = "";
                 makeActualMove(move.boardIdx, move.cellIdx);
             }, 50);
@@ -1334,7 +1356,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return Math.max(0, Math.min(1, score));
         }
 
-        function mctsSearch(rootMain, rootSmall, rootActive, player, msAllowed) {
+        function mctsSearch(rootMain, rootSmall, rootActive, player, msAllowed, maxIters) {
             const rootNode = new MctsNode(rootMain, rootSmall, rootActive, player);
             const startTime = performance.now();
             
@@ -1350,7 +1372,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             let iterations = 0;
-            while (performance.now() - startTime < msAllowed && iterations < 3000) {
+            while (performance.now() - startTime < msAllowed && iterations < maxIters) {
                 let node = rootNode;
                 
                 // Selection
@@ -2002,8 +2024,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         function generateLevel() {
-            // Clear old
-            scene.children.forEach(c => {
+            // Clear old - Fixed iteration bug
+            [...scene.children].forEach(c => {
                 if (c.userData.isMap || c.userData.isEntity) scene.remove(c);
             });
             entities = [];
