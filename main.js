@@ -165,6 +165,50 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function launchGame(gameId) {
+        const preloader = document.getElementById('game-preloader');
+        if (!preloader) {
+            // Fallback if preloader missing
+            performLaunch(gameId);
+            return;
+        }
+
+        const preloaderText = preloader.querySelector('.preloader-text');
+        const spinner = preloader.querySelector('.preloader-spinner');
+        
+        const gameColors = {
+            'tic-tac-toe': '#6366f1',
+            'snake': '#10b981',
+            'memory': '#f59e0b',
+            'mines': '#3b82f6',
+            '2048': '#edc22e',
+            'tetris': '#00f5ff',
+            'ultimate-ttt': '#a855f7',
+            'safe-crossing': '#4ecdc4'
+        };
+
+        const color = gameColors[gameId] || '#6366f1';
+        preloader.style.background = `radial-gradient(circle at center, ${color}AA 0%, #0f172a 100%)`;
+        preloader.style.backgroundColor = '#0f172a'; // Solid base
+        if (spinner) spinner.style.borderLeftColor = color;
+        if (preloaderText) {
+            preloaderText.style.background = `linear-gradient(to right, #fff, ${color})`;
+            preloaderText.style.webkitBackgroundClip = 'text';
+            preloaderText.innerText = `Entering ${gameId.replace(/-/g, ' ')}...`;
+        }
+
+        preloader.classList.add('active');
+        preloader.style.opacity = '1';
+
+        setTimeout(() => {
+            performLaunch(gameId);
+            setTimeout(() => {
+                preloader.style.opacity = '0';
+                setTimeout(() => preloader.classList.remove('active'), 500);
+            }, 600);
+        }, 800);
+    }
+
+    function performLaunch(gameId) {
         console.log('Initializing view for:', gameId);
         switchView('game-view');
         
@@ -612,6 +656,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function loadMemory() {
         gameContainer.innerHTML = `
             <div class="memory-container">
+                <div class="memory-disclaimer">THIS MAY SEEM IMPOSSIBLE. BUT IT IS NOT...</div>
                 <div class="memory-stats">
                     <div class="stat-box">Stage: <span id="memory-stage">1</span>/3</div>
                     <div class="stat-box timer-box">Time: <span id="memory-timer">30.0</span>s</div>
@@ -1869,36 +1914,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- SAFE CROSSING ---
     function loadSafeCrossing() {
+        gameContainer.innerHTML = '';
         const mobile = isMobileDevice();
+        
         gameContainer.innerHTML = `
             <div id="safe-crossing-container">
                 <div id="sc-canvas-container"></div>
                 <div class="sc-ui-layer">
                     <div class="sc-top-bar">
-                        <div class="sc-stat">SCORE: <span id="sc-score">0</span></div>
-                        <div class="sc-stat text-center">MODE: <span id="sc-currentDifficulty">MEDIUM</span></div>
-                        <div class="sc-stat"><span id="sc-lives">❤️❤️❤️</span></div>
+                        <div class="sc-stat">🏆 <span id="sc-score">0</span></div>
+                        <div class="sc-stat">❤️ <span id="sc-lives">❤️❤️❤️</span></div>
                     </div>
-                    <div class="sc-controls-hint">${mobile
-                        ? '🕹️ D-Pad to move &nbsp;|&nbsp; Tap 🔫 to shoot'
-                        : 'Move: WASD / Arrows &nbsp;|&nbsp; Aim &amp; Shoot: MOUSE'
-                    }</div>
+                    <div class="sc-controls-hint">
+                        ${mobile ? '🕹️ Use D-Pad to move' : '⌨️ WASD/Arrows to move'}
+                    </div>
                 </div>
                 
                 <div class="sc-overlay" id="sc-startScreen">
-                    <h1>3D CROSS ROAD</h1>
-                    <p>Dodge cars, cross rivers, and shoot to slow traffic!</p>
-                    
-                    <div class="sc-difficulty-selection">
-                        <button class="sc-diff-btn" data-diff="easy">EASY</button>
-                        <button class="sc-diff-btn selected" data-diff="medium">MEDIUM</button>
-                        <button class="sc-diff-btn" data-diff="hard">HARD</button>
-                    </div>
-
-                    <button class="sc-btn" id="sc-startBtn">START GAME</button>
+                    <h1>CROSS ROAD</h1>
+                    <p>Dodge traffic and cross the road safely!</p>
+                    <div class="sc-mission-badge">TARGET: LANE 200</div>
+                    <button class="sc-btn" id="sc-startBtn">START MISSION</button>
                 </div>
 
-                <!-- Mobile D-Pad + Shoot button -->
                 <div id="sc-touch-controls"${mobile ? ' class="visible"' : ''}>
                     <div class="sc-dpad">
                         <div class="sc-dpad-center"></div>
@@ -1911,7 +1949,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         <button class="sc-dpad-btn" id="sc-btn-down">▼</button>
                         <div class="sc-dpad-center"></div>
                     </div>
-                    <button class="sc-shoot-btn" id="sc-btn-shoot">🔫</button>
                 </div>
             </div>
         `;
@@ -1922,379 +1959,212 @@ document.addEventListener('DOMContentLoaded', () => {
         const container = document.getElementById('sc-canvas-container');
         const scoreEl = document.getElementById('sc-score');
         const livesEl = document.getElementById('sc-lives');
-        const currentDifficultyEl = document.getElementById('sc-currentDifficulty');
         const startScreen = document.getElementById('sc-startScreen');
         const startBtn = document.getElementById('sc-startBtn');
-        const diffBtns = document.querySelectorAll('.sc-diff-btn');
 
-        const GRID = 1;
-        const COLS = 11;
-        const ROWS = 12;
-        const WIDTH = 600;
-        const HEIGHT = 660;
+        if (!container) return () => {};
 
+        // Three.js Setup
+        const scene = new THREE.Scene();
+        const aspect = container.clientWidth / container.clientHeight;
+        const d = 150;
+        const camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 1000);
+        
+        // Define camera offsets - Refined for mobile (less tilted)
+        const camOffsetX = isMobileDevice() ? 150 : 200;
+        const camOffsetY = isMobileDevice() ? -150 : -200;
+        const camOffsetZ = isMobileDevice() ? 250 : 200;
+        
+        camera.position.set(camOffsetX, camOffsetY, camOffsetZ);
+        camera.lookAt(0, 0, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.shadowMap.enabled = true;
+        container.appendChild(renderer.domElement);
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(-100, -100, 200);
+        dirLight.castShadow = true;
+        scene.add(dirLight);
+
+        // Game Constants
+        const GRID_SIZE = 42;
+        const TILES_COUNT = 17;
+        const WIN_SCORE = 200;
+        
         let score = 0;
         let lives = 3;
-        let highestRow = 0;
         let gameOver = false;
         let gameStarted = false;
-        let difficulty = 'medium';
-        let speedMultiplier = 1;
-        
-        let scene, camera, renderer, dirLight;
-        let playerGroup;
-        let gameGrid = [];
-        let entities = [];
-        let projectiles = [];
+        let lanes = [];
         let animFrame;
 
-        let mouse = new THREE.Vector2();
-        let raycaster = new THREE.Raycaster();
-        let intersectPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-        let targetVector = new THREE.Vector3();
+        // Player
+        const player = new THREE.Group();
+        const body = new THREE.Mesh(
+            new THREE.BoxGeometry(15, 15, 20),
+            new THREE.MeshLambertMaterial({ color: 0xffffff, flatShading: true })
+        );
+        body.position.z = 10;
+        body.castShadow = true;
+        player.add(body);
+        scene.add(player);
 
-        const MAT = {
-            water: new THREE.MeshPhongMaterial({ color: 0x118AB2, transparent: true, opacity: 0.8 }),
-            road: new THREE.MeshPhongMaterial({ color: 0x4A4E69 }),
-            safe: new THREE.MeshPhongMaterial({ color: 0x7FB069 }),
-            log: new THREE.MeshPhongMaterial({ color: 0x8B5A2B }),
-            player: new THREE.MeshPhongMaterial({ color: 0xF4A261 }),
-            carRed: new THREE.MeshPhongMaterial({ color: 0xEF476F }),
-            carYellow: new THREE.MeshPhongMaterial({ color: 0xFFD166 }),
-            projectile: new THREE.MeshStandardMaterial({ color: 0xFFFFAA, emissive: 0xFFFF00, emissiveIntensity: 0.5 })
-        };
+        let currentLane = 0;
+        let currentCol = 0;
 
-        let player = {
-            gridX: Math.floor(COLS/2),
-            gridY: ROWS - 1,
-            isDead: false,
-            cooldown: 0
-        };
+        function createLane(index) {
+            const isGrass = index === 0 || Math.random() > 0.4;
+            const lane = new THREE.Mesh(
+                new THREE.BoxGeometry(TILES_COUNT * GRID_SIZE, GRID_SIZE, 3),
+                new THREE.MeshLambertMaterial({ color: isGrass ? 0xbaf455 : 0x454a59 })
+            );
+            lane.position.y = index * GRID_SIZE;
+            lane.receiveShadow = true;
+            scene.add(lane);
 
-        function initThree() {
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x87CEEB);
-            scene.fog = new THREE.Fog(0x87CEEB, 10, 25);
+            const laneData = { index, type: isGrass ? 'grass' : 'road', vehicles: [] };
 
-            camera = new THREE.PerspectiveCamera(45, WIDTH / HEIGHT, 0.1, 100);
-            camera.position.set(5, 7, 15);
-            camera.lookAt(5, 0, 5);
+            if (!isGrass) {
+                const vehicleCount = Math.floor(Math.random() * 2) + 1;
+                const speed = Math.random() * 2 + 1;
+                const dir = Math.random() > 0.5 ? 1 : -1;
+                const color = [0x6366f1, 0xa855f7, 0xec4899][Math.floor(Math.random()*3)];
 
-            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-            renderer.setSize(WIDTH, HEIGHT);
-            renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-            container.appendChild(renderer.domElement);
-
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-            scene.add(ambientLight);
-
-            dirLight = new THREE.DirectionalLight(0xffffff, 0.7);
-            dirLight.position.set(5, 10, 5);
-            dirLight.castShadow = true;
-            dirLight.shadow.camera.left = -10;
-            dirLight.shadow.camera.right = 10;
-            dirLight.shadow.camera.top = 10;
-            dirLight.shadow.camera.bottom = -10;
-            scene.add(dirLight);
-
-            createPlayer();
-            generateLevel();
-        }
-
-        function createPlayer() {
-            playerGroup = new THREE.Group();
-            const bodyGeo = new THREE.BoxGeometry(0.6, 0.6, 0.6);
-            const body = new THREE.Mesh(bodyGeo, MAT.player);
-            body.position.y = 0.3;
-            body.castShadow = true;
-            playerGroup.add(body);
-            scene.add(playerGroup);
-            updatePlayerPosition();
-        }
-
-        function updatePlayerPosition() {
-            playerGroup.position.set(player.gridX, 0, player.gridY);
-            camera.position.z = player.gridY + 6;
-            camera.position.x = player.gridX;
-            camera.lookAt(player.gridX, 0, player.gridY - 3);
-            dirLight.position.z = player.gridY + 5;
-            dirLight.target.position.set(player.gridX, 0, player.gridY);
-            dirLight.target.updateMatrixWorld();
-        }
-
-        function generateLevel() {
-            // Clear old - Fixed iteration bug
-            [...scene.children].forEach(c => {
-                if (c.userData.isMap || c.userData.isEntity) scene.remove(c);
-            });
-            entities = [];
-            gameGrid = [];
-
-            for (let i = 0; i < ROWS; i++) {
-                let type = 'safe';
-                if (i !== 0 && i !== ROWS - 1) {
-                    const r = Math.random();
-                    if (r < 0.45) type = 'road';
-                    else if (r < 0.8) type = 'water';
-                }
-                gameGrid[i] = type;
-
-                const geo = new THREE.BoxGeometry(COLS, 0.5, 1);
-                const mesh = new THREE.Mesh(geo, MAT[type]);
-                mesh.position.set(5, -0.25, i);
-                mesh.receiveShadow = true;
-                mesh.userData.isMap = true;
-                scene.add(mesh);
-
-                if (type === 'road' || type === 'water') {
-                    const speed = (Math.random() * 2 + 1.5) * speedMultiplier;
-                    const dir = Math.random() > 0.5 ? 1 : -1;
-                    const count = Math.floor(Math.random() * 2) + 1;
-                    
-                    for (let j = 0; j < count; j++) {
-                        const isCar = type === 'road';
-                        const entGeo = new THREE.BoxGeometry(isCar ? 1.5 : 2, 0.6, 0.8);
-                        const mat = isCar ? (Math.random() > 0.5 ? MAT.carRed : MAT.carYellow) : MAT.log;
-                        const ent = new THREE.Mesh(entGeo, mat);
-                        ent.position.set(dir === 1 ? -2 - (j * 4) : 12 + (j * 4), 0.3, i);
-                        ent.castShadow = true;
-                        ent.userData = { isEntity: true, type: isCar ? 'car' : 'log', speed: speed, dir: dir, row: i, isSlowed: false };
-                        scene.add(ent);
-                        entities.push(ent);
-                    }
+                for (let i = 0; i < vehicleCount; i++) {
+                    const vehicle = new THREE.Mesh(
+                        new THREE.BoxGeometry(60, 30, 15),
+                        new THREE.MeshLambertMaterial({ color })
+                    );
+                    vehicle.position.set((Math.random() * 600 - 300), index * GRID_SIZE, 12);
+                    vehicle.castShadow = true;
+                    scene.add(vehicle);
+                    laneData.vehicles.push({ mesh: vehicle, speed, dir });
                 }
             }
+            lanes.push(laneData);
+        }
+
+        function updateCamera() {
+            camera.position.y = currentLane * GRID_SIZE + camOffsetY;
+            camera.position.x = currentCol * GRID_SIZE + camOffsetX;
+            camera.lookAt(currentCol * GRID_SIZE, currentLane * GRID_SIZE, 0);
+        }
+
+        async function move(dir) {
+            if (!gameStarted || gameOver) return;
+            switch(dir) {
+                case 'up': currentLane++; break;
+                case 'down': if (currentLane > 0) currentLane--; break;
+                case 'left': if (currentCol > -8) currentCol--; break;
+                case 'right': if (currentCol < 8) currentCol++; break;
+            }
+            player.position.set(currentCol * GRID_SIZE, currentLane * GRID_SIZE, 0);
+            updateCamera();
+            
+            if (currentLane > score) {
+                score = currentLane;
+                scoreEl.innerText = score;
+                createLane(lanes.length);
+
+                // Win condition
+                if (score >= WIN_SCORE) {
+                    win();
+                }
+            }
+        }
+
+        function win() {
+            gameOver = true;
+            gameStarted = false;
+            setTimeout(() => {
+                window.showVictoryScreen(`LEGENDARY! You crossed 200 lanes and won the Safe Crossing mission, ${playerName}!`);
+            }, 500);
         }
 
         function checkCollisions() {
-            if (player.isDead) return;
-
-            let onLog = false;
-            let logSpeed = 0;
-            let logDir = 0;
-
-            for (let ent of entities) {
-                if (ent.userData.row !== player.gridY) continue;
-                
-                const boundX = ent.userData.type === 'car' ? 0.75 : 1.0;
-                if (Math.abs(playerGroup.position.x - ent.position.x) < boundX) {
-                    if (ent.userData.type === 'car') {
-                        playerDeath("Splat!");
-                        return;
-                    } else if (ent.userData.type === 'log') {
-                        onLog = true;
-                        logSpeed = ent.userData.speed;
-                        logDir = ent.userData.dir;
+            const playerBox = new THREE.Box3().setFromObject(player);
+            const activeLane = lanes[currentLane];
+            if (activeLane && activeLane.type === 'road') {
+                activeLane.vehicles.forEach(v => {
+                    const vehicleBox = new THREE.Box3().setFromObject(v.mesh);
+                    if (playerBox.intersectsBox(vehicleBox)) {
+                        die();
                     }
-                }
-            }
-
-            if (gameGrid[player.gridY] === 'water') {
-                if (!onLog) {
-                    playerDeath("Splash!");
-                } else {
-                    playerGroup.position.x += (logSpeed * logDir * 0.016);
-                    player.gridX = playerGroup.position.x;
-                    if (player.gridX < 0 || player.gridX > COLS - 1) playerDeath("Swept Away!");
-                    camera.position.x = player.gridX;
-                }
+                });
             }
         }
 
-        function playerDeath(reason) {
-            player.isDead = true;
+        function die() {
+            gameOver = true;
+            gameStarted = false;
             lives--;
             livesEl.innerText = "❤️".repeat(lives);
-            playerGroup.scale.set(1, 0.1, 1); // squish
-            
             if (lives <= 0) {
-                gameOver = true;
-                setTimeout(() => window.showLossScreen(`You didn't look both ways, ${playerName}. ${reason}`), 500);
+                setTimeout(() => window.showLossScreen(`Traffic is tough, ${playerName}! You reached lane ${score}.`), 500);
             } else {
-                setTimeout(resetPlayer, 1000);
+                setTimeout(() => {
+                    currentLane = 0;
+                    currentCol = 0;
+                    player.position.set(0, 0, 0);
+                    updateCamera();
+                    gameOver = false;
+                    gameStarted = true;
+                }, 1000);
             }
         }
-
-        function resetPlayer() {
-            player.isDead = false;
-            player.gridX = Math.floor(COLS/2);
-            player.gridY = ROWS - 1;
-            highestRow = ROWS - 1;
-            playerGroup.scale.set(1, 1, 1);
-            updatePlayerPosition();
-        }
-
-        const handleKeys = (e) => {
-            if (!gameStarted || gameOver || player.isDead) return;
-            let moved = false;
-            let targetX = Math.round(player.gridX); // Snap to grid if leaving log
-            
-            switch(e.key.toLowerCase()) {
-                case 'w': case 'arrowup': 
-                    if (player.gridY > 0) { player.gridY--; moved = true; player.gridX = targetX; } break;
-                case 's': case 'arrowdown': 
-                    if (player.gridY < ROWS - 1) { player.gridY++; moved = true; player.gridX = targetX;} break;
-                case 'a': case 'arrowleft': 
-                    if (targetX > 0) { player.gridX = targetX - 1; moved = true; } break;
-                case 'd': case 'arrowright': 
-                    if (targetX < COLS - 1) { player.gridX = targetX + 1; moved = true; } break;
-            }
-
-            if (moved) {
-                playerGroup.position.set(player.gridX, 0, player.gridY);
-                updatePlayerPosition();
-                
-                if (player.gridY < highestRow) {
-                    highestRow = player.gridY;
-                    score += 10;
-                    scoreEl.innerText = score;
-                }
-
-                if (player.gridY === 0) {
-                    score += 50;
-                    scoreEl.innerText = score;
-                    speedMultiplier += 0.1;
-                    setTimeout(() => {
-                        generateLevel();
-                        resetPlayer();
-                    }, 200);
-                }
-            }
-        };
-
-        const handleClick = (e) => {
-            if (!gameStarted || gameOver || player.isDead || player.cooldown > 0) return;
-            const rect = renderer.domElement.getBoundingClientRect();
-            mouse.x = ((e.clientX - rect.left) / WIDTH) * 2 - 1;
-            mouse.y = -((e.clientY - rect.top) / HEIGHT) * 2 + 1;
-
-            raycaster.setFromCamera(mouse, camera);
-            raycaster.ray.intersectPlane(intersectPlane, targetVector);
-            
-            const dir = targetVector.clone().sub(playerGroup.position).normalize();
-            
-            const projGeo = new THREE.SphereGeometry(0.2);
-            const proj = new THREE.Mesh(projGeo, MAT.projectile);
-            proj.position.copy(playerGroup.position);
-            proj.position.y = 0.5;
-            scene.add(proj);
-            projectiles.push({ mesh: proj, dir: dir, life: 60 });
-            player.cooldown = 15;
-        };
-
-        diffBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                diffBtns.forEach(b => b.classList.remove('selected'));
-                btn.classList.add('selected');
-                difficulty = btn.dataset.diff;
-                currentDifficultyEl.innerText = difficulty.toUpperCase();
-                speedMultiplier = difficulty === 'easy' ? 0.7 : (difficulty === 'hard' ? 1.5 : 1);
-            });
-        });
-
-        startBtn.addEventListener('click', () => {
-            startScreen.style.display = 'none';
-            gameStarted = true;
-            generateLevel();
-            resetPlayer();
-        });
 
         function animate() {
             animFrame = requestAnimationFrame(animate);
             if (!gameStarted || gameOver) {
-                if (renderer && scene && camera) renderer.render(scene, camera);
+                renderer.render(scene, camera);
                 return;
             }
 
-            if (player.cooldown > 0) player.cooldown--;
-
-            // Move entities
-            entities.forEach(ent => {
-                ent.position.x += ent.userData.speed * ent.userData.dir * 0.016;
-                if (ent.userData.dir === 1 && ent.position.x > COLS + 2) ent.position.x = -2;
-                if (ent.userData.dir === -1 && ent.position.x < -2) ent.position.x = COLS + 2;
+            lanes.forEach(lane => {
+                lane.vehicles.forEach(v => {
+                    v.mesh.position.x += v.speed * v.dir;
+                    if (v.dir === 1 && v.mesh.position.x > 400) v.mesh.position.x = -400;
+                    if (v.dir === -1 && v.mesh.position.x < -400) v.mesh.position.x = 400;
+                });
             });
-
-            // Move projectiles
-            for (let i = projectiles.length - 1; i >= 0; i--) {
-                let p = projectiles[i];
-                p.mesh.position.addScaledVector(p.dir, 0.4);
-                p.life--;
-
-                // Check hit cars to slow them down
-                let hit = false;
-                for (let ent of entities) {
-                    if (ent.userData.type === 'car' && !ent.userData.isSlowed) {
-                        if (p.mesh.position.distanceTo(ent.position) < 1.0) {
-                            ent.userData.speed *= 0.3;
-                            ent.userData.isSlowed = true;
-                            ent.material = MAT.safe; // Turn green when slowed
-                            hit = true;
-                            break;
-                        }
-                    }
-                }
-
-                if (hit || p.life <= 0) {
-                    scene.remove(p.mesh);
-                    projectiles.splice(i, 1);
-                }
-            }
 
             checkCollisions();
             renderer.render(scene, camera);
         }
 
-        initThree();
+        // Initialize
+        for (let i = 0; i < 20; i++) createLane(i);
+        updateCamera();
         animate();
 
-        window.addEventListener('keydown', handleKeys);
-        renderer.domElement.addEventListener('mousedown', handleClick);
+        startBtn.addEventListener('click', () => {
+            startScreen.style.display = 'none';
+            gameStarted = true;
+        });
 
-        // Mobile D-Pad controls
-        const btnUp    = document.getElementById('sc-btn-up');
-        const btnDown  = document.getElementById('sc-btn-down');
-        const btnLeft  = document.getElementById('sc-btn-left');
-        const btnRight = document.getElementById('sc-btn-right');
-        const btnShoot = document.getElementById('sc-btn-shoot');
+        const keyHandler = (e) => {
+            if (['ArrowUp', 'w'].includes(e.key)) move('up');
+            if (['ArrowDown', 's'].includes(e.key)) move('down');
+            if (['ArrowLeft', 'a'].includes(e.key)) move('left');
+            if (['ArrowRight', 'd'].includes(e.key)) move('right');
+        };
+        window.addEventListener('keydown', keyHandler);
 
-        function scMobileMove(key) {
-            handleKeys({ key, preventDefault: () => {} });
-        }
-
-        function scMobileShoot() {
-            if (!gameStarted || gameOver || player.isDead || player.cooldown > 0) return;
-            // Shoot forward (in the direction the player is facing: negative Z axis)
-            const dir = new THREE.Vector3(0, 0, -1).normalize();
-            const projGeo = new THREE.SphereGeometry(0.2);
-            const proj = new THREE.Mesh(projGeo, MAT.projectile);
-            proj.position.copy(playerGroup.position);
-            proj.position.y = 0.5;
-            scene.add(proj);
-            projectiles.push({ mesh: proj, dir: dir, life: 60 });
-            player.cooldown = 15;
-        }
-
-        if (btnUp)    btnUp.addEventListener('touchstart',    (e) => { e.preventDefault(); scMobileMove('w'); }, { passive: false });
-        if (btnDown)  btnDown.addEventListener('touchstart',  (e) => { e.preventDefault(); scMobileMove('s'); }, { passive: false });
-        if (btnLeft)  btnLeft.addEventListener('touchstart',  (e) => { e.preventDefault(); scMobileMove('a'); }, { passive: false });
-        if (btnRight) btnRight.addEventListener('touchstart', (e) => { e.preventDefault(); scMobileMove('d'); }, { passive: false });
-        if (btnShoot) btnShoot.addEventListener('touchstart', (e) => { e.preventDefault(); scMobileShoot(); }, { passive: false });
-
-        // Also support click for testing on desktop
-        if (btnUp)    btnUp.addEventListener('click',    () => scMobileMove('w'));
-        if (btnDown)  btnDown.addEventListener('click',  () => scMobileMove('s'));
-        if (btnLeft)  btnLeft.addEventListener('click',  () => scMobileMove('a'));
-        if (btnRight) btnRight.addEventListener('click', () => scMobileMove('d'));
-        if (btnShoot) btnShoot.addEventListener('click', () => scMobileShoot());
+        // Mobile Controls
+        document.getElementById('sc-btn-up')?.addEventListener('click', () => move('up'));
+        document.getElementById('sc-btn-down')?.addEventListener('click', () => move('down'));
+        document.getElementById('sc-btn-left')?.addEventListener('click', () => move('left'));
+        document.getElementById('sc-btn-right')?.addEventListener('click', () => move('right'));
 
         return () => {
-            gameStarted = false;
-            gameOver = true;
             cancelAnimationFrame(animFrame);
-            window.removeEventListener('keydown', handleKeys);
-            renderer.domElement.removeEventListener('mousedown', handleClick);
+            window.removeEventListener('keydown', keyHandler);
             renderer.dispose();
             scene.clear();
         };
