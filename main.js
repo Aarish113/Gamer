@@ -183,7 +183,8 @@ document.addEventListener('DOMContentLoaded', () => {
             '2048': '#edc22e',
             'tetris': '#00f5ff',
             'ultimate-ttt': '#a855f7',
-            'safe-crossing': '#4ecdc4'
+            'safe-crossing': '#4ecdc4',
+            'pools': '#3b82f6'
         };
 
         const color = gameColors[gameId] || '#6366f1';
@@ -244,6 +245,10 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'safe-crossing':
                 gameTitle.innerText = 'Safe Crossing';
                 loadSafeCrossing();
+                break;
+            case 'pools':
+                gameTitle.innerText = 'Pools';
+                loadPools();
                 break;
             default:
                 console.error('Unknown game ID:', gameId);
@@ -331,6 +336,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     ? '<li>📱 <strong>Mobile:</strong> Use the D-pad to move. Tap 🔫 to shoot a car and slow it down!</li>'
                     : '<li>⌨️ <strong>Desktop:</strong> WASD or Arrow Keys to move. Click to aim and shoot cars.</li>'}
                 <li>You have 3 lives — lose them all and it\'s game over!</li>
+            </ul>
+        `,
+        'pools': () => `
+            <ul>
+                <li>Goal: Predict the card combinations of other players to earn coins. Reach 100 to win.</li>
+                <li>Each player gets 2 cards (1-10). The host also has 2 secret cards.</li>
+                <li>Pay to reveal host cards: 1 coin for the 1st card, 3 coins for the 2nd.</li>
+                <li>Bet on a player\'s hand: <strong>Even-Even</strong>, <strong>Odd-Even</strong>, or <strong>Odd-Odd</strong>.</li>
+                <li><strong>Payouts:</strong> EE (100% pool), OE (60% pool), OO (30% pool).</li>
+                <li>If you guess wrongly, the player you bet on gets a small compensation!</li>
             </ul>
         `
     };
@@ -2167,6 +2182,416 @@ document.addEventListener('DOMContentLoaded', () => {
             window.removeEventListener('keydown', keyHandler);
             renderer.dispose();
             scene.clear();
+        };
+    }
+    // --- POOLS ---
+    function loadPools() {
+        gameContainer.innerHTML = `
+            <div class="pools-container">
+                <div id="pools-setup" class="pools-setup">
+                    <h2 class="setup-title">Choose Game Mode</h2>
+                    <div class="setup-options">
+                        <button class="setup-btn" data-humans="1">1 Player + 3 AI</button>
+                        <button class="setup-btn" data-humans="2">2 Players + 2 AI</button>
+                    </div>
+                </div>
+                <div id="pools-game" style="display: none;">
+                    <div class="pools-table">
+                        <div id="p2" class="player-box p2">
+                            <div class="player-name">Computer 2</div>
+                            <div class="player-coins">10</div>
+                            <div class="player-cards" id="cards-p2"></div>
+                        </div>
+                        <div id="p1" class="player-box p1">
+                            <div class="player-name">Computer 1</div>
+                            <div class="player-coins">10</div>
+                            <div class="player-cards" id="cards-p1"></div>
+                        </div>
+                        <div id="p3" class="player-box p3">
+                            <div class="player-name">Computer 3</div>
+                            <div class="player-coins">10</div>
+                            <div class="player-cards" id="cards-p3"></div>
+                        </div>
+                        <div id="p0" class="player-box p0">
+                            <div class="player-name">${playerName}</div>
+                            <div class="player-coins">10</div>
+                            <div class="player-cards" id="cards-p0"></div>
+                        </div>
+                        
+                        <div class="host-area">
+                            <div class="pool-info">
+                                <div class="pool-label">Total Pool</div>
+                                <div class="pool-amount" id="pool-amount">0</div>
+                            </div>
+                            <div class="host-cards" id="host-cards"></div>
+                            <div id="host-controls">
+                                <button id="btn-open-h1" class="btn-rules">Open Card 1 (1🪙)</button>
+                                <button id="btn-open-h2" class="btn-rules" disabled>Open Card 2 (3🪙)</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="betting-controls" id="betting-controls">
+                        <h3 id="current-turn-label">Your Turn to Bet</h3>
+                        <div class="bet-input-wrapper">
+                            <span>Bet Amount:</span>
+                            <input type="number" id="bet-amount" class="bet-amount-input" value="1" min="1" max="10">
+                        </div>
+                        <div class="bet-targets">
+                            <span>Target Player:</span>
+                            <div id="target-player-btns"></div>
+                        </div>
+                        <div class="combination-btns">
+                            <button class="combo-btn" data-combo="EE">Even-Even</button>
+                            <button class="combo-btn" data-combo="OE">Odd-Even</button>
+                            <button class="combo-btn" data-combo="OO">Odd-Odd</button>
+                        </div>
+                        <button id="btn-place-bet" class="btn-action">Place Bet</button>
+                    </div>
+
+                    <div id="pools-message" class="ttt-status"></div>
+                </div>
+            </div>
+        `;
+        currentGameCleanup = initPoolsLogic();
+    }
+
+    function initPoolsLogic() {
+        const setupDiv = document.getElementById('pools-setup');
+        const gameDiv = document.getElementById('pools-game');
+        const setupBtns = document.querySelectorAll('.setup-btn');
+        const messageEl = document.getElementById('pools-message');
+        const poolEl = document.getElementById('pool-amount');
+        const btnOpenH1 = document.getElementById('btn-open-h1');
+        const btnOpenH2 = document.getElementById('btn-open-h2');
+        const bettingControls = document.getElementById('betting-controls');
+        const turnLabel = document.getElementById('current-turn-label');
+        const targetBtnsContainer = document.getElementById('target-player-btns');
+        const comboBtns = document.querySelectorAll('.combo-btn');
+        const betInput = document.getElementById('bet-amount');
+        const btnPlaceBet = document.getElementById('btn-place-bet');
+
+        let numHumans = 1;
+        let players = [];
+        let deck = [];
+        let hostCards = [];
+        let pool = 0;
+        let currentRoundPhase = 'opening'; // 'opening', 'betting', 'reveal'
+        let currentBettorIndex = 0; // The human player currently betting
+        let bets = []; // { bettor, target, combo, amount }
+        let roundOver = false;
+
+        setupBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                numHumans = parseInt(btn.dataset.humans);
+                setupDiv.style.display = 'none';
+                gameDiv.style.display = 'block';
+                startNewGame();
+            });
+        });
+
+        function startNewGame() {
+            players = [
+                { id: 0, name: playerName, coins: 10, cards: [], isHuman: true },
+                { id: 1, name: numHumans > 1 ? "Human 2" : "Computer 1", coins: 10, cards: [], isHuman: numHumans > 1 },
+                { id: 2, name: "Computer 2", coins: 10, cards: [], isHuman: false },
+                { id: 3, name: "Computer 3", coins: 10, cards: [], isHuman: false }
+            ];
+            updatePlayerUI();
+            startNewRound();
+        }
+
+        function startNewRound() {
+            roundOver = false;
+            deck = Array.from({length: 10}, (_, i) => i + 1).sort(() => Math.random() - 0.5);
+            pool = 0;
+            bets = [];
+            currentRoundPhase = 'opening';
+            hostCards = [deck.pop(), deck.pop()];
+            players.forEach(p => p.cards = [deck.pop(), deck.pop()]);
+
+            updatePoolUI();
+            updatePlayerUI();
+            renderHostCards(true);
+            renderBettingUI();
+            
+            btnOpenH1.disabled = false;
+            btnOpenH2.disabled = true;
+            bettingControls.style.display = 'none';
+            messageEl.innerText = "Round Starting! Pay to reveal host cards or move to betting.";
+            
+            // Add a "Move to Betting" button if they don't want to open host cards
+            if (!document.getElementById('btn-skip-opening')) {
+                const skipBtn = document.createElement('button');
+                skipBtn.id = 'btn-skip-opening';
+                skipBtn.className = 'btn-rules';
+                skipBtn.innerText = 'Start Betting';
+                skipBtn.onclick = startBettingPhase;
+                document.getElementById('host-controls').appendChild(skipBtn);
+            } else {
+                const skipBtn = document.getElementById('btn-skip-opening');
+                skipBtn.style.display = 'inline-block';
+            }
+        }
+
+        function renderHostCards(hidden) {
+            const container = document.getElementById('host-cards');
+            container.innerHTML = hostCards.map((c, i) => `
+                <div class="pools-card ${hidden ? 'hidden' : ''}" id="host-card-${i}">${hidden ? '?' : c}</div>
+            `).join('');
+        }
+
+        function renderPlayerCards() {
+            players.forEach(p => {
+                const container = document.getElementById(`cards-p${p.id}`);
+                // Always show human cards to themselves? Actually p0 is always human. 
+                // If numHumans=2, p1 is also human.
+                const isCurrentHuman = (p.id === 0) || (numHumans > 1 && p.id === 1);
+                container.innerHTML = p.cards.map(c => `
+                    <div class="pools-card ${isCurrentHuman || roundOver ? '' : 'hidden'}">${isCurrentHuman || roundOver ? c : '?'}</div>
+                `).join('');
+            });
+        }
+
+        btnOpenH1.addEventListener('click', () => {
+            if (players[0].coins >= 1) {
+                players[0].coins -= 1;
+                pool += 1;
+                document.getElementById('host-card-0').classList.remove('hidden');
+                document.getElementById('host-card-0').innerText = hostCards[0];
+                btnOpenH1.disabled = true;
+                btnOpenH2.disabled = false;
+                updatePoolUI();
+                updatePlayerUI();
+                messageEl.innerText = `${players[0].name} paid 1🪙 to open the first host card. Total Pool: ${pool}🪙`;
+            } else {
+                messageEl.innerText = "No coins, bro!";
+            }
+        });
+
+        btnOpenH2.addEventListener('click', () => {
+            if (players[0].coins >= 3) {
+                players[0].coins -= 3;
+                pool += 3;
+                document.getElementById('host-card-1').classList.remove('hidden');
+                document.getElementById('host-card-1').innerText = hostCards[1];
+                btnOpenH2.disabled = true;
+                updatePoolUI();
+                updatePlayerUI();
+                messageEl.innerText = `${players[0].name} paid 3🪙 to open the second host card. Total Pool: ${pool}🪙`;
+            } else {
+                messageEl.innerText = "Not enough coins!";
+            }
+        });
+
+        function startBettingPhase() {
+            currentRoundPhase = 'betting';
+            document.getElementById('host-controls').style.display = 'none';
+            if (document.getElementById('btn-skip-opening')) document.getElementById('btn-skip-opening').style.display = 'none';
+            bettingControls.style.display = 'flex';
+            currentBettorIndex = 0;
+            processNextBettor();
+        }
+
+        function processNextBettor() {
+            if (currentBettorIndex >= players.length) {
+                resolveRound();
+                return;
+            }
+
+            const bettor = players[currentBettorIndex];
+            if (bettor.isHuman) {
+                turnLabel.innerText = `${bettor.name}'s Turn to Bet`;
+                renderBettingUI();
+            } else {
+                // AI Turn
+                setTimeout(() => {
+                    makeAiBet(bettor);
+                    currentBettorIndex++;
+                    processNextBettor();
+                }, 1000);
+            }
+        }
+
+        function renderBettingUI() {
+            const bettor = players[currentBettorIndex];
+            targetBtnsContainer.innerHTML = players
+                .filter(p => p.id !== bettor.id)
+                .map(p => `<button class="target-btn" data-id="${p.id}">${p.name}</button>`)
+                .join('');
+            
+            const targetBtns = document.querySelectorAll('.target-btn');
+            targetBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    targetBtns.forEach(b => b.classList.remove('selected'));
+                    btn.classList.add('selected');
+                });
+            });
+
+            comboBtns.forEach(btn => {
+                btn.classList.remove('selected');
+                btn.addEventListener('click', () => {
+                    comboBtns.forEach(b => b.classList.remove('selected'));
+                    btn.classList.add('selected');
+                });
+            });
+            
+            betInput.max = bettor.coins;
+            if (parseInt(betInput.value) > bettor.coins) betInput.value = bettor.coins;
+        }
+
+        btnPlaceBet.onclick = () => {
+            const bettor = players[currentBettorIndex];
+            const targetId = document.querySelector('.target-btn.selected')?.dataset.id;
+            const combo = document.querySelector('.combo-btn.selected')?.dataset.combo;
+            const amount = parseInt(betInput.value);
+
+            if (!targetId || !combo || isNaN(amount) || amount <= 0) {
+                messageEl.innerText = "Select target, combo and amount!";
+                return;
+            }
+            if (amount > bettor.coins) {
+                messageEl.innerText = "You don't have that many coins!";
+                return;
+            }
+
+            bettor.coins -= amount;
+            pool += amount;
+            bets.push({ bettorId: bettor.id, targetId: parseInt(targetId), combo, amount });
+            
+            updatePoolUI();
+            updatePlayerUI();
+            
+            currentBettorIndex++;
+            processNextBettor();
+        };
+
+        function makeAiBet(aiPlayer) {
+            if (aiPlayer.coins <= 0) return;
+            const targets = players.filter(p => p.id !== aiPlayer.id);
+            const target = targets[Math.floor(Math.random() * targets.length)];
+            const combos = ['EE', 'OE', 'OO'];
+            const combo = combos[Math.floor(Math.random() * combos.length)];
+            const amount = Math.min(aiPlayer.coins, Math.floor(Math.random() * 3) + 1);
+
+            aiPlayer.coins -= amount;
+            pool += amount;
+            bets.push({ bettorId: aiPlayer.id, targetId: target.id, combo, amount });
+            updatePoolUI();
+            updatePlayerUI();
+            messageEl.innerText = `${aiPlayer.name} placed a bet of ${amount} coins on ${target.name}.`;
+        }
+
+        function resolveRound() {
+            roundOver = true;
+            bettingControls.style.display = 'none';
+            renderPlayerCards();
+            renderHostCards(false);
+
+            let log = "Reveal! ";
+            const winners = [];
+            const compensations = []; // { targetId, amount }
+
+            bets.forEach(bet => {
+                const target = players.find(p => p.id === bet.targetId);
+                const c1 = target.cards[0];
+                const c2 = target.cards[1];
+                const isC1Even = c1 % 2 === 0;
+                const isC2Even = c2 % 2 === 0;
+                
+                let actualCombo = "";
+                if (isC1Even && isC2Even) actualCombo = "EE";
+                else if (!isC1Even && !isC2Even) actualCombo = "OO";
+                else actualCombo = "OE";
+
+                if (bet.combo === actualCombo) {
+                    winners.push({ bettorId: bet.bettorId, combo: bet.combo });
+                    log += `${players[bet.bettorId].name} guessed ${actualCombo} on ${target.name} right! `;
+                } else {
+                    // Compensation: for every wrong guess, target gets 50% of that specific bet from pool
+                    const comp = Math.max(1, Math.floor(bet.amount * 0.5));
+                    compensations.push({ targetId: bet.targetId, amount: comp });
+                    log += `${players[bet.bettorId].name} guessed wrong on ${target.name}. `;
+                }
+            });
+
+            let currentPool = pool;
+            
+            // 1. Pay Compensations first
+            compensations.forEach(c => {
+                const amount = Math.min(currentPool, c.amount);
+                players[c.targetId].coins += amount;
+                currentPool -= amount;
+            });
+
+            // 2. Pay Winners by Priority
+            const eeWinners = winners.filter(w => w.combo === 'EE');
+            const oeWinners = winners.filter(w => w.combo === 'OE');
+            const ooWinners = winners.filter(w => w.combo === 'OO');
+
+            if (eeWinners.length > 0) {
+                // EE Winners take 100% of available pool
+                const share = Math.floor(currentPool / eeWinners.length);
+                eeWinners.forEach(w => players[w.bettorId].coins += share);
+                currentPool = 0;
+            } else if (oeWinners.length > 0) {
+                // OE Winners take 60% of available pool
+                const totalWin = Math.floor(currentPool * 0.6);
+                const share = Math.floor(totalWin / oeWinners.length);
+                oeWinners.forEach(w => players[w.bettorId].coins += share);
+                currentPool -= totalWin;
+            } else if (ooWinners.length > 0) {
+                // OO Winners take 30% of available pool
+                const totalWin = Math.floor(currentPool * 0.3);
+                const share = Math.floor(totalWin / ooWinners.length);
+                ooWinners.forEach(w => players[w.bettorId].coins += share);
+                currentPool -= totalWin;
+            }
+
+            pool = currentPool;
+            
+            updatePoolUI();
+            updatePlayerUI();
+            messageEl.innerText = log || "No one guessed right!";
+            
+            setTimeout(() => {
+                checkWin();
+            }, 5000);
+        }
+
+        function checkWin() {
+            const winner = players.find(p => p.coins >= 100);
+            if (winner) {
+                if (winner.isHuman) showCelebration(`${winner.name} reached 100 coins and wins the Pool!`);
+                else window.showLossScreen(`${winner.name} won. You are broke and a loser, ${playerName}.`);
+            } else {
+                const btnNext = document.createElement('button');
+                btnNext.className = 'btn-action';
+                btnNext.innerText = 'Next Round';
+                btnNext.onclick = () => {
+                    btnNext.remove();
+                    document.getElementById('host-controls').style.display = 'flex';
+                    startNewRound();
+                };
+                messageEl.appendChild(btnNext);
+            }
+        }
+
+        function updatePlayerUI() {
+            players.forEach(p => {
+                const box = document.getElementById(`p${p.id}`);
+                box.querySelector('.player-name').innerText = p.name;
+                box.querySelector('.player-coins').innerText = p.coins;
+            });
+            renderPlayerCards();
+        }
+
+        function updatePoolUI() {
+            poolEl.innerText = pool;
+        }
+
+        return () => {
+            // Cleanup logic if needed
         };
     }
 
