@@ -2462,6 +2462,43 @@ header p {
     padding-bottom: 10px;
 }
 
+.avatar-list {
+    display: flex;
+    gap: 15px;
+    margin: 20px 0;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.selectable-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    border: 3px solid rgba(255, 255, 255, 0.1);
+    background-size: cover;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.selectable-avatar:hover {
+    border-color: rgba(255, 255, 255, 0.4);
+    transform: scale(1.1);
+}
+
+.selectable-avatar.selected {
+    border-color: #3b82f6;
+    box-shadow: 0 0 15px #3b82f6;
+    transform: scale(1.2);
+}
+
+.avatar-selection-label {
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    letter-spacing: 2px;
+    color: var(--text-muted);
+    font-weight: 800;
+}
+
 .results-row {
     padding: 8px 0;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);

@@ -2376,7 +2376,41 @@ document.addEventListener('DOMContentLoaded', () => {
         let roundOver = false;
         let currentSelectedBet = 1;
 
-        setupBtns.forEach(btn => {
+        const HUMAN_AVATARS = [
+            'file:///C:/Users/krish/.gemini/antigravity/brain/47e1b714-9f9c-4fc2-bb10-cfdbdf6cecf0/cyber_human_1_1775280341910.png',
+            'file:///C:/Users/krish/.gemini/antigravity/brain/47e1b714-9f9c-4fc2-bb10-cfdbdf6cecf0/cyber_human_2_1775280366017.png',
+            'https://api.dicebear.com/7.x/pixel-art/svg?seed=Deckard', // Cyber-Hacker
+            'https://api.dicebear.com/7.x/pixel-art/svg?seed=Ghost'   // Android
+        ];
+        let selectedAvatar = HUMAN_AVATARS[0];
+
+        // --- Setup View Rendering ---
+        setupDiv.innerHTML = `
+            <h2>Welcome to the High Stakes Pool</h2>
+            <p>Select your character and table mode.</p>
+            <div class="avatar-selection-label">Choose Your Avatar</div>
+            <div class="avatar-list" id="pools-avatar-list"></div>
+            <div class="setup-options">
+                <button class="setup-btn" data-humans="1">Single Player (vs 3 AI)</button>
+                <button class="setup-btn" data-humans="2">2 Players (Local Co-op)</button>
+            </div>
+        `;
+
+        const avatarListEl = document.getElementById('pools-avatar-list');
+        HUMAN_AVATARS.forEach((url, i) => {
+            const av = document.createElement('div');
+            av.className = `selectable-avatar ${i === 0 ? 'selected' : ''}`;
+            av.style.backgroundImage = `url('${url}')`;
+            av.onclick = () => {
+                document.querySelectorAll('.selectable-avatar').forEach(x => x.classList.remove('selected'));
+                av.classList.add('selected');
+                selectedAvatar = url;
+            };
+            avatarListEl.appendChild(av);
+        });
+
+        // Re-bind buttons since we replaced innerHTML
+        setupDiv.querySelectorAll('.setup-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 numHumans = parseInt(btn.dataset.humans);
                 setupDiv.style.display = 'none';
@@ -2387,8 +2421,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         function startNewGame() {
             players = [
-                { id: 0, name: playerName, coins: 10, cards: [], isHuman: true, avatar: AVATARS.p0 },
-                { id: 1, name: numHumans > 1 ? "Human 2" : BOT_NAMES[1], coins: 10, cards: [], isHuman: numHumans > 1, avatar: numHumans > 1 ? AVATARS.p0 : AVATARS.p1 },
+                { id: 0, name: playerName, coins: 10, cards: [], isHuman: true, avatar: selectedAvatar },
+                { id: 1, name: numHumans > 1 ? "Human 2" : BOT_NAMES[1], coins: 10, cards: [], isHuman: numHumans > 1, avatar: numHumans > 1 ? HUMAN_AVATARS[1] : AVATARS.p1 },
                 { id: 2, name: BOT_NAMES[2], coins: 10, cards: [], isHuman: false, avatar: AVATARS.p2 },
                 { id: 3, name: BOT_NAMES[3], coins: 10, cards: [], isHuman: false, avatar: AVATARS.p3 }
             ];
