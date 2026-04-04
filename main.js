@@ -10,6 +10,21 @@ document.addEventListener('DOMContentLoaded', () => {
     let playerName = "Player"; // Default
     let currentUTTTDifficulty = 'easy'; // Global for UTTT difficulty
 
+    // --- SIDEBAR TOGGLE ---
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    if (sidebarToggle) {
+        sidebarToggle.onclick = () => {
+            sidebar.classList.toggle('collapsed');
+        };
+    }
+
+    function toggleSidebar(collapse) {
+        if (!sidebar) return;
+        if (collapse) sidebar.classList.add('collapsed');
+        else sidebar.classList.remove('collapsed');
+    }
+
     // Device detection utility
     function isMobileDevice() {
         return ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || window.matchMedia('(pointer: coarse)').matches;
@@ -165,6 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function launchGame(gameId) {
+        toggleSidebar(true); // Auto-collapse when game starts
         const preloader = document.getElementById('game-preloader');
         if (!preloader) {
             // Fallback if preloader missing
@@ -1731,6 +1747,26 @@ document.addEventListener('DOMContentLoaded', () => {
           nextPiece = randomPiece();
           spawnNext();
           gameRunning = true;
+        // --- SIDEBAR TOGGLE ---
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    if (sidebarToggle) {
+        sidebarToggle.onclick = () => {
+            sidebar.classList.toggle('collapsed');
+        };
+    }
+
+    function toggleSidebar(collapse) {
+        if (collapse) sidebar.classList.add('collapsed');
+        else sidebar.classList.remove('collapsed');
+    }
+
+    // Existing launchGame function update
+    const originalLaunchGame = window.launchGame;
+    window.launchGame = function(gameId) {
+        toggleSidebar(true); // Auto-collapse
+        originalLaunchGame(gameId);
+    };
           gamePaused = false;
           document.getElementById('t2-overlay').style.display = 'none';
           lastTime = performance.now();
@@ -2184,72 +2220,114 @@ document.addEventListener('DOMContentLoaded', () => {
             scene.clear();
         };
     }
-    // --- POOLS ---
+    // --- POOLS (POLISHED) ---
     function loadPools() {
         gameContainer.innerHTML = `
             <div class="pools-container">
-                <div id="pools-setup" class="pools-setup">
-                    <h2 class="setup-title">Choose Game Mode</h2>
+                <div id="pools-setup" class="pools-setup-v2">
+                    <h2 class="setup-title">Welcome to the High Stakes Pool</h2>
+                    <p>Select your table mode and prepare to bet.</p>
                     <div class="setup-options">
-                        <button class="setup-btn" data-humans="1">1 Player + 3 AI</button>
-                        <button class="setup-btn" data-humans="2">2 Players + 2 AI</button>
+                        <button class="setup-btn" data-humans="1">Single Player (vs 3 AI)</button>
+                        <button class="setup-btn" data-humans="2">2 Players (Local Co-op)</button>
                     </div>
                 </div>
-                <div id="pools-game" style="display: none;">
+
+                <div id="pools-game" style="display: none; width: 100%;">
                     <div class="pools-table">
-                        <div id="p2" class="player-box p2">
-                            <div class="player-name">Computer 2</div>
-                            <div class="player-coins">10</div>
-                            <div class="player-cards" id="cards-p2"></div>
+                        <div class="pools-table-inner" id="pools-table-inner">
+                            <!-- Seat 2 (Top) -->
+                            <div id="p2" class="player-seat seat-2">
+                                <div class="avatar-wrap computer" id="avatar-p2"></div>
+                                <div class="player-meta">
+                                    <span class="player-name">Computer 2</span>
+                                    <div class="player-coins">10</div>
+                                </div>
+                                <div class="player-cards-wrap" id="cards-p2"></div>
+                            </div>
+
+                            <!-- Seat 1 (Left) -->
+                            <div id="p1" class="player-seat seat-1">
+                                <div class="avatar-wrap computer" id="avatar-p1"></div>
+                                <div class="player-meta">
+                                    <span class="player-name">Computer 1</span>
+                                    <div class="player-coins">10</div>
+                                </div>
+                                <div class="player-cards-wrap" id="cards-p1"></div>
+                            </div>
+
+                            <!-- Seat 3 (Right) -->
+                            <div id="p3" class="player-seat seat-3">
+                                <div class="avatar-wrap computer" id="avatar-p3"></div>
+                                <div class="player-meta">
+                                    <span class="player-name">Computer 3</span>
+                                    <div class="player-coins">10</div>
+                                </div>
+                                <div class="player-cards-wrap" id="cards-p3"></div>
+                            </div>
+
+                            <!-- Seat 0 (Bottom) -->
+                            <div id="p0" class="player-seat seat-0">
+                                <div class="avatar-wrap human" id="avatar-p0"></div>
+                                <div class="player-meta">
+                                    <span class="player-name">${playerName}</span>
+                                    <div class="player-coins">10</div>
+                                </div>
+                                <div class="player-cards-wrap" id="cards-p0"></div>
+                            </div>
+
+                            <!-- Center: Pool and Dealer -->
+                            <div class="pool-center">
+                                <div class="dealer-wrap">
+                                    <div class="dealer-avatar" id="dealer-avatar"></div>
+                                    <div class="pool-box">
+                                        <div class="pool-label">Main Pool</div>
+                                        <div class="pool-value" id="pool-amount">0</div>
+                                    </div>
+                                </div>
+                                <div class="host-reveals" id="host-cards"></div>
+                                <div id="host-controls" style="display: flex; gap: 10px;">
+                                    <button id="btn-open-h1" class="btn-rules">Clue 1 (1🪙)</button>
+                                    <button id="btn-open-h2" class="btn-rules" disabled>Clue 2 (3🪙)</button>
+                                </div>
+                            </div>
                         </div>
-                        <div id="p1" class="player-box p1">
-                            <div class="player-name">Computer 1</div>
-                            <div class="player-coins">10</div>
-                            <div class="player-cards" id="cards-p1"></div>
-                        </div>
-                        <div id="p3" class="player-box p3">
-                            <div class="player-name">Computer 3</div>
-                            <div class="player-coins">10</div>
-                            <div class="player-cards" id="cards-p3"></div>
-                        </div>
-                        <div id="p0" class="player-box p0">
-                            <div class="player-name">${playerName}</div>
-                            <div class="player-coins">10</div>
-                            <div class="player-cards" id="cards-p0"></div>
-                        </div>
+                    </div>
+
+                    <div class="betting-panel-v2" id="betting-controls" style="display: none; margin-left: auto; margin-right: auto;">
+                        <h3 id="current-turn-label" style="text-align: center; color: #3b82f6;">Your Turn</h3>
                         
-                        <div class="host-area">
-                            <div class="pool-info">
-                                <div class="pool-label">Total Pool</div>
-                                <div class="pool-amount" id="pool-amount">0</div>
+                        <div style="display: flex; flex-direction: column; gap: 10px;">
+                            <span style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase;">Select Chip Amount:</span>
+                            <div class="chip-group">
+                                <button class="chip-btn chip-1" data-val="1">1</button>
+                                <button class="chip-btn chip-3" data-val="3">3</button>
+                                <button class="chip-btn chip-5" data-val="5">5</button>
+                                <button class="chip-btn chip-10" data-val="10">10</button>
                             </div>
-                            <div class="host-cards" id="host-cards"></div>
-                            <div id="host-controls">
-                                <button id="btn-open-h1" class="btn-rules">Open Card 1 (1🪙)</button>
-                                <button id="btn-open-h2" class="btn-rules" disabled>Open Card 2 (3🪙)</button>
+                            <div style="text-align: center; margin-top: 5px;">
+                                Bet: <span id="current-bet-display" style="font-weight: 900; color: #fbbf24; font-size: 1.5rem;">1</span>🪙
                             </div>
                         </div>
+
+                        <div style="display: flex; flex-direction: column; gap: 10px;">
+                            <span style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase;">Target Opponent:</span>
+                            <div id="target-player-btns" class="bet-targets"></div>
+                        </div>
+
+                        <div style="display: flex; flex-direction: column; gap: 10px;">
+                            <span style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase;">Predict Combination:</span>
+                            <div class="combination-btns" style="justify-content: center;">
+                                <button class="combo-btn" data-combo="EE">Even-Even</button>
+                                <button class="combo-btn" data-combo="OE">Odd-Even</button>
+                                <button class="combo-btn" data-combo="OO">Odd-Odd</button>
+                            </div>
+                        </div>
+
+                        <button id="btn-place-bet" class="btn-action" style="width: 100%; margin-top: 10px;">Confirm Bet</button>
                     </div>
 
-                    <div class="betting-controls" id="betting-controls">
-                        <h3 id="current-turn-label">Your Turn to Bet</h3>
-                        <div class="bet-input-wrapper">
-                            <span>Bet Amount:</span>
-                            <input type="number" id="bet-amount" class="bet-amount-input" value="1" min="1" max="10">
-                        </div>
-                        <div class="bet-targets">
-                            <span>Target Player:</span>
-                            <div id="target-player-btns"></div>
-                        </div>
-                        <div class="combination-btns">
-                            <button class="combo-btn" data-combo="EE">Even-Even</button>
-                            <button class="combo-btn" data-combo="OE">Odd-Even</button>
-                            <button class="combo-btn" data-combo="OO">Odd-Odd</button>
-                        </div>
-                        <button id="btn-place-bet" class="btn-action">Place Bet</button>
-                    </div>
-
-                    <div id="pools-message" class="ttt-status"></div>
+                    <div id="pools-message" class="ttt-status" style="margin-top: 20px;"></div>
                 </div>
             </div>
         `;
@@ -2268,18 +2346,35 @@ document.addEventListener('DOMContentLoaded', () => {
         const turnLabel = document.getElementById('current-turn-label');
         const targetBtnsContainer = document.getElementById('target-player-btns');
         const comboBtns = document.querySelectorAll('.combo-btn');
-        const betInput = document.getElementById('bet-amount');
+        const chipBtns = document.querySelectorAll('.chip-btn');
+        const betDisplay = document.getElementById('current-bet-display');
         const btnPlaceBet = document.getElementById('btn-place-bet');
+        const tableInner = document.querySelector('.pools-table-inner');
+        
+        // Scale the table up slightly for more breathing space
+        const table = document.querySelector('.pools-table');
+        if (table) table.style.width = 'min(800px, 95vw)';
+
+        const AVATARS = {
+            p0: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix', // Default human
+            p1: 'file:///C:/Users/krish/.gemini/antigravity/brain/47e1b714-9f9c-4fc2-bb10-cfdbdf6cecf0/pool_player_1_avatar_1775278221302.png',
+            p2: 'file:///C:/Users/krish/.gemini/antigravity/brain/47e1b714-9f9c-4fc2-bb10-cfdbdf6cecf0/pool_player_2_avatar_1775278258664.png',
+            p3: 'file:///C:/Users/krish/.gemini/antigravity/brain/47e1b714-9f9c-4fc2-bb10-cfdbdf6cecf0/pool_player_3_avatar_1775278314159.png',
+            dealer: 'file:///C:/Users/krish/.gemini/antigravity/brain/47e1b714-9f9c-4fc2-bb10-cfdbdf6cecf0/pool_player_host_avatar_1775278336346.png'
+        };
+
+        const BOT_NAMES = ["Felix", "The Pro", "Neural-X", "Glitch"];
 
         let numHumans = 1;
         let players = [];
         let deck = [];
         let hostCards = [];
         let pool = 0;
-        let currentRoundPhase = 'opening'; // 'opening', 'betting', 'reveal'
-        let currentBettorIndex = 0; // The human player currently betting
-        let bets = []; // { bettor, target, combo, amount }
+        let currentBettorIndex = 0;
+        let cuePhaseIndex = 0;
+        let bets = [];
         let roundOver = false;
+        let currentSelectedBet = 1;
 
         setupBtns.forEach(btn => {
             btn.addEventListener('click', () => {
@@ -2292,11 +2387,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
         function startNewGame() {
             players = [
-                { id: 0, name: playerName, coins: 10, cards: [], isHuman: true },
-                { id: 1, name: numHumans > 1 ? "Human 2" : "Computer 1", coins: 10, cards: [], isHuman: numHumans > 1 },
-                { id: 2, name: "Computer 2", coins: 10, cards: [], isHuman: false },
-                { id: 3, name: "Computer 3", coins: 10, cards: [], isHuman: false }
+                { id: 0, name: playerName, coins: 10, cards: [], isHuman: true, avatar: AVATARS.p0 },
+                { id: 1, name: numHumans > 1 ? "Human 2" : BOT_NAMES[1], coins: 10, cards: [], isHuman: numHumans > 1, avatar: numHumans > 1 ? AVATARS.p0 : AVATARS.p1 },
+                { id: 2, name: BOT_NAMES[2], coins: 10, cards: [], isHuman: false, avatar: AVATARS.p2 },
+                { id: 3, name: BOT_NAMES[3], coins: 10, cards: [], isHuman: false, avatar: AVATARS.p3 }
             ];
+            
+            // Set Avatar Images
+            players.forEach(p => {
+                const av = document.getElementById(`avatar-p${p.id}`);
+                if (av) av.style.backgroundImage = `url('${p.avatar}')`;
+            });
+            document.getElementById('dealer-avatar').style.backgroundImage = `url('${AVATARS.dealer}')`;
+
             updatePlayerUI();
             startNewRound();
         }
@@ -2306,31 +2409,67 @@ document.addEventListener('DOMContentLoaded', () => {
             deck = Array.from({length: 10}, (_, i) => i + 1).sort(() => Math.random() - 0.5);
             pool = 0;
             bets = [];
-            currentRoundPhase = 'opening';
             hostCards = [deck.pop(), deck.pop()];
             players.forEach(p => p.cards = [deck.pop(), deck.pop()]);
 
             updatePoolUI();
-            updatePlayerUI();
+            // Clear current cards from UI for animation
+            players.forEach(p => {
+                const container = document.getElementById(`cards-p${p.id}`);
+                if (container) container.innerHTML = '';
+            });
+            
             renderHostCards(true);
-            renderBettingUI();
+            messageEl.innerText = "Host is dealing cards...";
             
-            btnOpenH1.disabled = false;
-            btnOpenH2.disabled = true;
-            bettingControls.style.display = 'none';
-            messageEl.innerText = "Round Starting! Pay to reveal host cards or move to betting.";
-            
-            // Add a "Move to Betting" button if they don't want to open host cards
-            if (!document.getElementById('btn-skip-opening')) {
-                const skipBtn = document.createElement('button');
-                skipBtn.id = 'btn-skip-opening';
-                skipBtn.className = 'btn-rules';
-                skipBtn.innerText = 'Start Betting';
-                skipBtn.onclick = startBettingPhase;
-                document.getElementById('host-controls').appendChild(skipBtn);
-            } else {
-                const skipBtn = document.getElementById('btn-skip-opening');
-                skipBtn.style.display = 'inline-block';
+            // Staggered dealing animation
+            players.forEach((p, i) => {
+                const isHuman = (p.id === 0) || (numHumans > 1 && p.id === 1);
+                const cardHtml = isHuman ? p.cards[0] : '?';
+                animateCard(p.id, cardHtml, i * 300);
+            });
+
+            setTimeout(() => {
+                bettingControls.style.display = 'none';
+                document.getElementById('host-controls').style.display = 'flex';
+                cuePhaseIndex = 0;
+                processCluePhase();
+            }, players.length * 300 + 800);
+        }
+
+        function animateCoin(playerIndex, count = 1) {
+            const playerEl = document.getElementById(`p${playerIndex}`);
+            const poolElLoc = document.getElementById('pool-amount');
+            const dealerEl = document.getElementById('dealer-avatar');
+            if (!playerEl || !poolElLoc) return;
+
+            const startRect = playerEl.getBoundingClientRect();
+            const endRect = poolElLoc.getBoundingClientRect();
+            const containerRect = tableInner.getBoundingClientRect();
+
+            for (let i = 0; i < count; i++) {
+                setTimeout(() => {
+                    const coin = document.createElement('div');
+                    coin.className = 'coin-particle';
+                    const jitterX = (Math.random() - 0.5) * 40;
+                    const jitterY = (Math.random() - 0.5) * 40;
+                    coin.style.left = `${startRect.left - containerRect.left + startRect.width/2 + jitterX}px`;
+                    coin.style.top = `${startRect.top - containerRect.top + startRect.height/2 + jitterY}px`;
+                    tableInner.appendChild(coin);
+                    coin.offsetHeight;
+                    coin.style.left = `${endRect.left - containerRect.left + endRect.width/2 - 12}px`;
+                    coin.style.top = `${endRect.top - containerRect.top + endRect.height/2 - 12}px`;
+                    
+                    setTimeout(() => {
+                        coin.classList.add('coin-bounce');
+                        if (dealerEl) {
+                            dealerEl.classList.remove('pulse');
+                            void dealerEl.offsetWidth;
+                            dealerEl.classList.add('pulse');
+                        }
+                        setTimeout(() => coin.remove(), 400);
+                    }, 600);
+                }, i * 150);
             }
         }
 
@@ -2341,127 +2480,231 @@ document.addEventListener('DOMContentLoaded', () => {
             `).join('');
         }
 
+        function animateCard(targetPlayerId, cardHtml, delay) {
+            setTimeout(() => {
+                const dealerEl = document.getElementById('dealer-avatar');
+                const targetEl = document.getElementById(`cards-p${targetPlayerId}`);
+                if (!dealerEl || !targetEl) return;
+
+                const startRect = dealerEl.getBoundingClientRect();
+                const containerRect = tableInner.getBoundingClientRect();
+                
+                const card = document.createElement('div');
+                card.className = 'pools-card card-deal-anim';
+                card.innerHTML = cardHtml;
+                card.style.left = `${startRect.left - containerRect.left + startRect.width/2 - 25}px`;
+                card.style.top = `${startRect.top - containerRect.top + startRect.height/2 - 37}px`;
+                tableInner.appendChild(card);
+
+                // Force reflow
+                card.offsetHeight;
+
+                // Move to final position
+                const targetRect = targetEl.getBoundingClientRect();
+                card.style.left = `${targetRect.left - containerRect.left + 10}px`;
+                card.style.top = `${targetRect.top - containerRect.top}px`;
+
+                setTimeout(() => {
+                    card.remove();
+                    renderPlayerCards();
+                }, 600);
+            }, delay);
+        }
+
         function renderPlayerCards() {
             players.forEach(p => {
                 const container = document.getElementById(`cards-p${p.id}`);
-                // Always show human cards to themselves? Actually p0 is always human. 
-                // If numHumans=2, p1 is also human.
                 const isCurrentHuman = (p.id === 0) || (numHumans > 1 && p.id === 1);
-                container.innerHTML = p.cards.map(c => `
-                    <div class="pools-card ${isCurrentHuman || roundOver ? '' : 'hidden'}">${isCurrentHuman || roundOver ? c : '?'}</div>
-                `).join('');
+                if (container) {
+                    container.innerHTML = p.cards.map(c => `
+                        <div class="pools-card ${isCurrentHuman || roundOver ? '' : 'hidden'}">${isCurrentHuman || roundOver ? c : '?'}</div>
+                    `).join('');
+                }
             });
         }
 
-        btnOpenH1.addEventListener('click', () => {
-            if (players[0].coins >= 1) {
-                players[0].coins -= 1;
-                pool += 1;
-                document.getElementById('host-card-0').classList.remove('hidden');
-                document.getElementById('host-card-0').innerText = hostCards[0];
-                btnOpenH1.disabled = true;
-                btnOpenH2.disabled = false;
-                updatePoolUI();
-                updatePlayerUI();
-                messageEl.innerText = `${players[0].name} paid 1🪙 to open the first host card. Total Pool: ${pool}🪙`;
-            } else {
-                messageEl.innerText = "No coins, bro!";
+        function processCluePhase() {
+            players.forEach(p => document.getElementById(`p${p.id}`).classList.remove('active'));
+            
+            // End clue phase if everyone decided or both clues open
+            const clue1Open = !document.getElementById('host-card-0').classList.contains('hidden');
+            const clue2Open = document.getElementById('host-card-1') && !document.getElementById('host-card-1').classList.contains('hidden');
+            
+            if (cuePhaseIndex >= players.length || (clue1Open && clue2Open)) {
+                startBettingPhase();
+                return;
             }
+
+            const currentPlayer = players[cuePhaseIndex];
+            document.getElementById(`p${currentPlayer.id}`).classList.add('active');
+            
+            btnOpenH1.disabled = clue1Open || currentPlayer.coins < 1;
+            btnOpenH2.disabled = !clue1Open || clue2Open || currentPlayer.coins < 3;
+            // Strict enforcement: Ensure clue 2 is disabled if clue 1 is NOT open
+            if (!clue1Open) btnOpenH2.disabled = true;
+
+            if (currentPlayer.isHuman) {
+                messageEl.innerText = `${currentPlayer.name}'s chance to open clues.`;
+                if (!document.getElementById('btn-skip-clue')) {
+                    const skipBtn = document.createElement('button');
+                    skipBtn.id = 'btn-skip-clue';
+                    skipBtn.className = 'btn-rules';
+                    skipBtn.innerText = 'Pass Turn';
+                    skipBtn.onclick = () => {
+                        cuePhaseIndex++;
+                        processCluePhase();
+                    };
+                    document.getElementById('host-controls').appendChild(skipBtn);
+                } else {
+                    document.getElementById('btn-skip-clue').style.display = 'inline-block';
+                }
+            } else {
+                if (document.getElementById('btn-skip-clue')) document.getElementById('btn-skip-clue').style.display = 'none';
+                btnOpenH1.disabled = true;
+                btnOpenH2.disabled = true;
+                
+                messageEl.innerText = `${currentPlayer.name} is thinking about revealing clues...`;
+                setTimeout(() => {
+                    // AI Decision
+                    let acted = false;
+                    if (!clue1Open && currentPlayer.coins >= 1 && Math.random() < 0.3) {
+                        openClue(1, currentPlayer);
+                        acted = true;
+                    } else if (clue1Open && !clue2Open && currentPlayer.coins >= 3 && Math.random() < 0.15) {
+                        openClue(2, currentPlayer);
+                        acted = true;
+                    }
+                    
+                    setTimeout(() => {
+                        cuePhaseIndex++;
+                        processCluePhase();
+                    }, acted ? 1000 : 500);
+                }, 1000);
+            }
+        }
+
+        function openClue(num, player) {
+            if (num === 1) {
+                player.coins -= 1;
+                pool += 1;
+                animateCoin(player.id, 1);
+                const el = document.getElementById('host-card-0');
+                el.classList.remove('hidden');
+                el.innerText = hostCards[0];
+                messageEl.innerText = `${player.name} paid 1🪙 for Clue 1!`;
+            } else {
+                player.coins -= 3;
+                pool += 3;
+                animateCoin(player.id, 3);
+                const el = document.getElementById('host-card-1');
+                el.classList.remove('hidden');
+                el.innerText = hostCards[1];
+                messageEl.innerText = `${player.name} paid 3🪙 for Clue 2!`;
+            }
+            updatePoolUI();
+            updatePlayerUI();
+        }
+
+        btnOpenH1.addEventListener('click', () => {
+            openClue(1, players[cuePhaseIndex]);
+            // Don't auto-advance in human turn unless both clues open? 
+            // Give them continuous chance until they pass or finish.
+            btnOpenH1.disabled = true;
+            const canOpen2 = players[cuePhaseIndex].coins >= 3;
+            btnOpenH2.disabled = !canOpen2;
         });
 
         btnOpenH2.addEventListener('click', () => {
-            if (players[0].coins >= 3) {
-                players[0].coins -= 3;
-                pool += 3;
-                document.getElementById('host-card-1').classList.remove('hidden');
-                document.getElementById('host-card-1').innerText = hostCards[1];
-                btnOpenH2.disabled = true;
-                updatePoolUI();
-                updatePlayerUI();
-                messageEl.innerText = `${players[0].name} paid 3🪙 to open the second host card. Total Pool: ${pool}🪙`;
-            } else {
-                messageEl.innerText = "Not enough coins!";
-            }
+            openClue(2, players[cuePhaseIndex]);
+            btnOpenH2.disabled = true;
         });
 
         function startBettingPhase() {
-            currentRoundPhase = 'betting';
+            if (document.getElementById('btn-skip-clue')) document.getElementById('btn-skip-clue').style.display = 'none';
             document.getElementById('host-controls').style.display = 'none';
-            if (document.getElementById('btn-skip-opening')) document.getElementById('btn-skip-opening').style.display = 'none';
             bettingControls.style.display = 'flex';
             currentBettorIndex = 0;
             processNextBettor();
         }
 
         function processNextBettor() {
+            players.forEach(p => document.getElementById(`p${p.id}`).classList.remove('active'));
             if (currentBettorIndex >= players.length) {
                 resolveRound();
                 return;
             }
 
             const bettor = players[currentBettorIndex];
+            document.getElementById(`p${bettor.id}`).classList.add('active');
+
             if (bettor.isHuman) {
-                turnLabel.innerText = `${bettor.name}'s Turn to Bet`;
+                turnLabel.innerText = `${bettor.name}'s Bet`;
                 renderBettingUI();
             } else {
-                // AI Turn
+                bettingControls.style.display = 'none';
                 setTimeout(() => {
                     makeAiBet(bettor);
                     currentBettorIndex++;
                     processNextBettor();
-                }, 1000);
+                }, 1500);
             }
         }
 
         function renderBettingUI() {
+            bettingControls.style.display = 'flex';
             const bettor = players[currentBettorIndex];
             targetBtnsContainer.innerHTML = players
                 .filter(p => p.id !== bettor.id)
                 .map(p => `<button class="target-btn" data-id="${p.id}">${p.name}</button>`)
                 .join('');
             
-            const targetBtns = document.querySelectorAll('.target-btn');
-            targetBtns.forEach(btn => {
-                btn.addEventListener('click', () => {
-                    targetBtns.forEach(b => b.classList.remove('selected'));
+            document.querySelectorAll('.target-btn').forEach(btn => {
+                btn.onclick = () => {
+                    document.querySelectorAll('.target-btn').forEach(b => b.classList.remove('selected'));
                     btn.classList.add('selected');
-                });
+                };
             });
 
-            comboBtns.forEach(btn => {
+            chipBtns.forEach(btn => {
                 btn.classList.remove('selected');
-                btn.addEventListener('click', () => {
-                    comboBtns.forEach(b => b.classList.remove('selected'));
-                    btn.classList.add('selected');
-                });
+                btn.onclick = () => {
+                    const val = parseInt(btn.dataset.val);
+                    if (val <= bettor.coins) {
+                        currentSelectedBet = val;
+                        betDisplay.innerText = val;
+                        chipBtns.forEach(b => b.style.borderColor = 'white');
+                        btn.style.borderColor = '#fbbf24';
+                    }
+                };
             });
             
-            betInput.max = bettor.coins;
-            if (parseInt(betInput.value) > bettor.coins) betInput.value = bettor.coins;
+            comboBtns.forEach(btn => {
+                btn.classList.remove('selected');
+                btn.onclick = () => {
+                    comboBtns.forEach(b => b.classList.remove('selected'));
+                    btn.classList.add('selected');
+                };
+            });
         }
 
         btnPlaceBet.onclick = () => {
             const bettor = players[currentBettorIndex];
             const targetId = document.querySelector('.target-btn.selected')?.dataset.id;
             const combo = document.querySelector('.combo-btn.selected')?.dataset.combo;
-            const amount = parseInt(betInput.value);
+            const amount = currentSelectedBet;
 
-            if (!targetId || !combo || isNaN(amount) || amount <= 0) {
-                messageEl.innerText = "Select target, combo and amount!";
-                return;
-            }
-            if (amount > bettor.coins) {
-                messageEl.innerText = "You don't have that many coins!";
+            if (!targetId || !combo) {
+                messageEl.innerText = "Select target and combo!";
                 return;
             }
 
             bettor.coins -= amount;
             pool += amount;
+            animateCoin(bettor.id, Math.min(amount, 5));
             bets.push({ bettorId: bettor.id, targetId: parseInt(targetId), combo, amount });
             
             updatePoolUI();
             updatePlayerUI();
-            
             currentBettorIndex++;
             processNextBettor();
         };
@@ -2472,14 +2715,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const target = targets[Math.floor(Math.random() * targets.length)];
             const combos = ['EE', 'OE', 'OO'];
             const combo = combos[Math.floor(Math.random() * combos.length)];
-            const amount = Math.min(aiPlayer.coins, Math.floor(Math.random() * 3) + 1);
+            const amount = Math.min(aiPlayer.coins, Math.random() > 0.5 ? 3 : 1);
 
             aiPlayer.coins -= amount;
             pool += amount;
+            animateCoin(aiPlayer.id, amount);
             bets.push({ bettorId: aiPlayer.id, targetId: target.id, combo, amount });
             updatePoolUI();
             updatePlayerUI();
-            messageEl.innerText = `${aiPlayer.name} placed a bet of ${amount} coins on ${target.name}.`;
+            messageEl.innerText = `${aiPlayer.name} placed a bet on ${target.name}.`;
         }
 
         function resolveRound() {
@@ -2488,100 +2732,105 @@ document.addEventListener('DOMContentLoaded', () => {
             renderPlayerCards();
             renderHostCards(false);
 
-            let log = "Reveal! ";
+            let log = `<h3 style="text-align: center; margin-bottom: 20px;">Table Summary</h3>
+                        <div class="results-table">
+                            <div class="results-header">Player</div>
+                            <div class="results-header">Cards</div>
+                            <div class="results-header" style="text-align: right;">Result</div>`;
+            
+            const playerResults = {}; 
+
+            players.forEach(p => {
+                const isC1Even = p.cards[0] % 2 === 0;
+                const isC2Even = p.cards[1] % 2 === 0;
+                let actualCombo = (isC1Even && isC2Even) ? "EE" : (!isC1Even && !isC2Even) ? "OO" : "OE";
+                playerResults[p.id] = actualCombo;
+                const comboDesc = actualCombo === "EE" ? "Even-Even" : actualCombo === "OO" ? "Odd-Odd" : "Odd-Even";
+                log += `<div class="results-row">${p.name}</div>
+                        <div class="results-row" style="letter-spacing: 2px; font-weight: 800;">${p.cards[0]}, ${p.cards[1]}</div>
+                        <div class="results-row" style="color: #3b82f6; font-weight: 900; text-align: right;">${comboDesc}</div>`;
+            });
+            log += "</div>";
+
             const winners = [];
-            const compensations = []; // { targetId, amount }
+            const compensations = [];
 
             bets.forEach(bet => {
-                const target = players.find(p => p.id === bet.targetId);
-                const c1 = target.cards[0];
-                const c2 = target.cards[1];
-                const isC1Even = c1 % 2 === 0;
-                const isC2Even = c2 % 2 === 0;
-                
-                let actualCombo = "";
-                if (isC1Even && isC2Even) actualCombo = "EE";
-                else if (!isC1Even && !isC2Even) actualCombo = "OO";
-                else actualCombo = "OE";
-
-                if (bet.combo === actualCombo) {
+                const targetResult = playerResults[bet.targetId];
+                if (bet.combo === targetResult) {
                     winners.push({ bettorId: bet.bettorId, combo: bet.combo });
-                    log += `${players[bet.bettorId].name} guessed ${actualCombo} on ${target.name} right! `;
                 } else {
-                    // Compensation: for every wrong guess, target gets 50% of that specific bet from pool
-                    const comp = Math.max(1, Math.floor(bet.amount * 0.5));
-                    compensations.push({ targetId: bet.targetId, amount: comp });
-                    log += `${players[bet.bettorId].name} guessed wrong on ${target.name}. `;
+                    compensations.push({ targetId: bet.targetId, amount: Math.max(1, Math.floor(bet.amount * 0.5)) });
                 }
             });
 
             let currentPool = pool;
-            
-            // 1. Pay Compensations first
             compensations.forEach(c => {
                 const amount = Math.min(currentPool, c.amount);
                 players[c.targetId].coins += amount;
                 currentPool -= amount;
             });
 
-            // 2. Pay Winners by Priority
             const eeWinners = winners.filter(w => w.combo === 'EE');
             const oeWinners = winners.filter(w => w.combo === 'OE');
             const ooWinners = winners.filter(w => w.combo === 'OO');
 
+            let winnerSummary = "<div class='winner-banner'>";
             if (eeWinners.length > 0) {
-                // EE Winners take 100% of available pool
                 const share = Math.floor(currentPool / eeWinners.length);
                 eeWinners.forEach(w => players[w.bettorId].coins += share);
                 currentPool = 0;
+                winnerSummary += `🏆 EE JACKPOT! ${eeWinners.map(w => players[w.bettorId].name).join(', ')} cleared the pool.`;
             } else if (oeWinners.length > 0) {
-                // OE Winners take 60% of available pool
                 const totalWin = Math.floor(currentPool * 0.6);
-                const share = Math.floor(totalWin / oeWinners.length);
-                oeWinners.forEach(w => players[w.bettorId].coins += share);
+                oeWinners.forEach(w => players[w.bettorId].coins += Math.floor(totalWin / oeWinners.length));
                 currentPool -= totalWin;
+                winnerSummary += `✅ OE MATCH: ${oeWinners.map(w => players[w.bettorId].name).join(', ')} won.`;
             } else if (ooWinners.length > 0) {
-                // OO Winners take 30% of available pool
                 const totalWin = Math.floor(currentPool * 0.3);
-                const share = Math.floor(totalWin / ooWinners.length);
-                ooWinners.forEach(w => players[w.bettorId].coins += share);
+                ooWinners.forEach(w => players[w.bettorId].coins += Math.floor(totalWin / ooWinners.length));
                 currentPool -= totalWin;
+                winnerSummary += `🆗 OO MATCH: ${ooWinners.map(w => players[w.bettorId].name).join(', ')} won.`;
+            } else {
+                winnerSummary += "❌ No winning bets. Pool rolls over!";
             }
+            winnerSummary += "</div>";
 
             pool = currentPool;
-            
             updatePoolUI();
             updatePlayerUI();
-            messageEl.innerText = log || "No one guessed right!";
+            messageEl.innerHTML = log + winnerSummary;
             
-            setTimeout(() => {
-                checkWin();
-            }, 5000);
+            setTimeout(() => checkWin(), 8000);
         }
 
         function checkWin() {
             const winner = players.find(p => p.coins >= 100);
             if (winner) {
-                if (winner.isHuman) showCelebration(`${winner.name} reached 100 coins and wins the Pool!`);
-                else window.showLossScreen(`${winner.name} won. You are broke and a loser, ${playerName}.`);
+                if (winner.isHuman) showCelebration(`${winner.name} reached 100 coins and wins the table!`);
+                else window.showLossScreen(`${winner.name} won. Better luck next time, ${playerName}.`);
             } else {
+                const nextContainer = document.createElement('div');
+                nextContainer.className = 'next-round-container';
                 const btnNext = document.createElement('button');
                 btnNext.className = 'btn-action';
-                btnNext.innerText = 'Next Round';
+                btnNext.innerText = 'Next Round Deal';
                 btnNext.onclick = () => {
-                    btnNext.remove();
-                    document.getElementById('host-controls').style.display = 'flex';
+                    nextContainer.remove();
                     startNewRound();
                 };
-                messageEl.appendChild(btnNext);
+                nextContainer.appendChild(btnNext);
+                messageEl.appendChild(nextContainer);
             }
         }
 
         function updatePlayerUI() {
             players.forEach(p => {
                 const box = document.getElementById(`p${p.id}`);
-                box.querySelector('.player-name').innerText = p.name;
-                box.querySelector('.player-coins').innerText = p.coins;
+                if (box) {
+                    box.querySelector('.player-name').innerText = p.name;
+                    box.querySelector('.player-coins').innerText = p.coins;
+                }
             });
             renderPlayerCards();
         }
@@ -2590,9 +2839,7 @@ document.addEventListener('DOMContentLoaded', () => {
             poolEl.innerText = pool;
         }
 
-        return () => {
-            // Cleanup logic if needed
-        };
+        return () => {};
     }
 
 });
