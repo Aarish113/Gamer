@@ -2377,22 +2377,21 @@ document.addEventListener('DOMContentLoaded', () => {
         let currentSelectedBet = 1;
 
         const HUMAN_AVATARS = [
-            'file:///C:/Users/krish/.gemini/antigravity/brain/47e1b714-9f9c-4fc2-bb10-cfdbdf6cecf0/cyber_human_1_1775280341910.png',
-            'file:///C:/Users/krish/.gemini/antigravity/brain/47e1b714-9f9c-4fc2-bb10-cfdbdf6cecf0/cyber_human_2_1775280366017.png',
-            'https://api.dicebear.com/7.x/pixel-art/svg?seed=Deckard', // Cyber-Hacker
-            'https://api.dicebear.com/7.x/pixel-art/svg?seed=Ghost'   // Android
+            'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix',
+            'https://api.dicebear.com/7.x/avataaars/svg?seed=Anya',
+            'https://api.dicebear.com/7.x/avataaars/svg?seed=Xavier',
+            'https://api.dicebear.com/7.x/pixel-art/svg?seed=Deckard'
         ];
         let selectedAvatar = HUMAN_AVATARS[0];
 
         // --- Setup View Rendering ---
         setupDiv.innerHTML = `
             <h2>Welcome to the High Stakes Pool</h2>
-            <p>Select your character and table mode.</p>
+            <p>Select your character to join the table.</p>
             <div class="avatar-selection-label">Choose Your Avatar</div>
             <div class="avatar-list" id="pools-avatar-list"></div>
             <div class="setup-options">
-                <button class="setup-btn" data-humans="1">Single Player (vs 3 AI)</button>
-                <button class="setup-btn" data-humans="2">2 Players (Local Co-op)</button>
+                <button class="setup-btn btn-action" data-humans="1" style="min-width: 250px;">Enter Private Table</button>
             </div>
         `;
 
@@ -2412,7 +2411,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Re-bind buttons since we replaced innerHTML
         setupDiv.querySelectorAll('.setup-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                numHumans = parseInt(btn.dataset.humans);
+                numHumans = 1; // Always 1 human now
                 setupDiv.style.display = 'none';
                 gameDiv.style.display = 'block';
                 startNewGame();
