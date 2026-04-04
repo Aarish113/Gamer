@@ -383,13 +383,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function loadTicTacToe() {
         gameContainer.innerHTML = `
             <div class="ttt-container">
-                <div class="ttt-modes">
-                    <button class="mode-btn active" data-mode="pvp">Local PvP</button>
-                    <button class="mode-btn" data-mode="ai">vs POWER</button>
-                </div>
                 <div class="ttt-info">
                     <div class="player-indicator" id="player-x">Player X</div>
-                    <div class="player-indicator" id="player-o">Player O</div>
+                    <div class="player-indicator" id="player-o">POWER (AI)</div>
                 </div>
                 <div class="ttt-board" id="ttt-board">
                     ${Array(9).fill(0).map((_, i) => `<div class="cell" data-index="${i}"></div>`).join('')}
@@ -414,7 +410,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let currentPlayer = 'X';
         let gameState = ["", "", "", "", "", "", "", "", ""];
         let gameActive = true;
-        let gameMode = 'pvp';
+        let gameMode = 'ai';
 
         const winningConditions = [
             [0, 1, 2], [3, 4, 5], [6, 7, 8],
@@ -423,15 +419,6 @@ document.addEventListener('DOMContentLoaded', () => {
         ];
 
         playerX.classList.add('active');
-
-        modeBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                modeBtns.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                gameMode = btn.dataset.mode;
-                resetGame();
-            });
-        });
 
         function handleResultValidation() {
             let roundWon = false;
@@ -2355,11 +2342,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (table) table.style.width = 'min(800px, 95vw)';
 
         const AVATARS = {
-            p0: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix', // Default human
-            p1: 'file:///C:/Users/krish/.gemini/antigravity/brain/47e1b714-9f9c-4fc2-bb10-cfdbdf6cecf0/pool_player_1_avatar_1775278221302.png',
-            p2: 'file:///C:/Users/krish/.gemini/antigravity/brain/47e1b714-9f9c-4fc2-bb10-cfdbdf6cecf0/pool_player_2_avatar_1775278258664.png',
-            p3: 'file:///C:/Users/krish/.gemini/antigravity/brain/47e1b714-9f9c-4fc2-bb10-cfdbdf6cecf0/pool_player_3_avatar_1775278314159.png',
-            dealer: 'file:///C:/Users/krish/.gemini/antigravity/brain/47e1b714-9f9c-4fc2-bb10-cfdbdf6cecf0/pool_player_host_avatar_1775278336346.png'
+            p0: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix',
+            p1: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Shadow',
+            p2: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Zenith',
+            p3: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Volt',
+            dealer: 'https://api.dicebear.com/7.x/bottts/svg?seed=Oracle'
         };
 
         const BOT_NAMES = ["Felix", "The Pro", "Neural-X", "Glitch"];
