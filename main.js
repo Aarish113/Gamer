@@ -2361,6 +2361,8 @@ document.addEventListener('DOMContentLoaded', () => {
         let bets = [];
         let roundOver = false;
         let currentSelectedBet = 1;
+        let cheatsEnabled = false;
+        let cheatBuffer = "";
 
         const HUMAN_AVATARS = [
             'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix',
@@ -2495,7 +2497,7 @@ document.addEventListener('DOMContentLoaded', () => {
         function renderHostCards(hidden) {
             const container = document.getElementById('host-cards');
             container.innerHTML = hostCards.map((c, i) => `
-                <div class="pools-card ${hidden ? 'hidden' : ''}" id="host-card-${i}">${hidden ? '?' : c}</div>
+                <div class="pools-card ${hidden && !cheatsEnabled ? 'hidden' : ''}" id="host-card-${i}">${hidden && !cheatsEnabled ? '?' : c}</div>
             `).join('');
         }
 
@@ -2535,8 +2537,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const container = document.getElementById(`cards-p${p.id}`);
                 const isCurrentHuman = (p.id === 0) || (numHumans > 1 && p.id === 1);
                 if (container) {
+                    const shouldShow = isCurrentHuman || roundOver || cheatsEnabled;
                     container.innerHTML = p.cards.map(c => `
-                        <div class="pools-card ${isCurrentHuman || roundOver ? '' : 'hidden'}">${isCurrentHuman || roundOver ? c : '?'}</div>
+                        <div class="pools-card ${shouldShow ? '' : 'hidden'}">${shouldShow ? c : '?'}</div>
                     `).join('');
                 }
             });
@@ -2858,7 +2861,26 @@ document.addEventListener('DOMContentLoaded', () => {
             poolEl.innerText = pool;
         }
 
-        return () => {};
+        const handlePoolsCheat = (e) => {
+            cheatBuffer += e.key.toUpperCase();
+            if (cheatBuffer.length > 5) cheatBuffer = cheatBuffer.slice(-5);
+            if (cheatBuffer === "BRIBE") {
+                cheatsEnabled = !cheatsEnabled;
+                cheatBuffer = "";
+                messageEl.innerText = cheatsEnabled ? "Cheats Activated: Bribed the dealer..." : "Cheats Deactivated.";
+                if (cheatsEnabled) messageEl.style.color = "#fbbf24";
+                else messageEl.style.color = "";
+                
+                updatePlayerUI();
+                renderHostCards(!roundOver);
+                console.log("%c Bribe Accepted: All cards revealed. ", "background: #222; color: #fbbf24; font-size: 1.2rem;");
+            }
+        };
+        window.addEventListener('keydown', handlePoolsCheat);
+
+        return () => {
+            window.removeEventListener('keydown', handlePoolsCheat);
+        };
     }
 
 });
