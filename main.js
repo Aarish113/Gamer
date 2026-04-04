@@ -2226,10 +2226,9 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="pools-container">
                 <div id="pools-setup" class="pools-setup-v2">
                     <h2 class="setup-title">Welcome to the High Stakes Pool</h2>
-                    <p>Select your table mode and prepare to bet.</p>
+                    <p>Select your character and enter the private table.</p>
                     <div class="setup-options">
-                        <button class="setup-btn" data-humans="1">Single Player (vs 3 AI)</button>
-                        <button class="setup-btn" data-humans="2">2 Players (Local Co-op)</button>
+                        <button class="setup-btn btn-action" data-humans="1" style="min-width: 250px;">Enter Private Table</button>
                     </div>
                 </div>
 
@@ -2386,12 +2385,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // --- Setup View Rendering ---
         setupDiv.innerHTML = `
-            <h2>Welcome to the High Stakes Pool</h2>
-            <p>Select your character to join the table.</p>
+            <h2 class="setup-title">Welcome to the High Stakes Pool</h2>
+            <p>Select your character to join the private table.</p>
             <div class="avatar-selection-label">Choose Your Avatar</div>
             <div class="avatar-list" id="pools-avatar-list"></div>
             <div class="setup-options">
-                <button class="setup-btn btn-action" data-humans="1" style="min-width: 250px;">Enter Private Table</button>
+                <button class="setup-btn btn-action" data-humans="1" style="min-width: 280px; padding: 20px;">Enter Private Table</button>
             </div>
         `;
 
