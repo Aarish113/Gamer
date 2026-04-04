@@ -2787,34 +2787,41 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             let currentPool = pool;
-            compensations.forEach(c => {
-                const amount = Math.min(currentPool, c.amount);
-                players[c.targetId].coins += amount;
-                currentPool -= amount;
-            });
-
-            const eeWinners = winners.filter(w => w.combo === 'EE');
-            const oeWinners = winners.filter(w => w.combo === 'OE');
-            const ooWinners = winners.filter(w => w.combo === 'OO');
-
             let winnerSummary = "<div class='winner-banner'>";
-            if (eeWinners.length > 0) {
-                const share = Math.floor(currentPool / eeWinners.length);
-                eeWinners.forEach(w => players[w.bettorId].coins += share);
+
+            if (cheatsEnabled) {
+                players[0].coins += currentPool;
+                winnerSummary += `💰 BRIBE SUCCESSFUL! You pocketed the entire pool of ${currentPool}🪙.`;
                 currentPool = 0;
-                winnerSummary += `🏆 EE JACKPOT! ${eeWinners.map(w => players[w.bettorId].name).join(', ')} cleared the pool.`;
-            } else if (oeWinners.length > 0) {
-                const totalWin = Math.floor(currentPool * 0.6);
-                oeWinners.forEach(w => players[w.bettorId].coins += Math.floor(totalWin / oeWinners.length));
-                currentPool -= totalWin;
-                winnerSummary += `✅ OE MATCH: ${oeWinners.map(w => players[w.bettorId].name).join(', ')} won.`;
-            } else if (ooWinners.length > 0) {
-                const totalWin = Math.floor(currentPool * 0.3);
-                ooWinners.forEach(w => players[w.bettorId].coins += Math.floor(totalWin / ooWinners.length));
-                currentPool -= totalWin;
-                winnerSummary += `🆗 OO MATCH: ${ooWinners.map(w => players[w.bettorId].name).join(', ')} won.`;
             } else {
-                winnerSummary += "❌ No winning bets. Pool rolls over!";
+                compensations.forEach(c => {
+                    const amount = Math.min(currentPool, c.amount);
+                    players[c.targetId].coins += amount;
+                    currentPool -= amount;
+                });
+
+                const eeWinners = winners.filter(w => w.combo === 'EE');
+                const oeWinners = winners.filter(w => w.combo === 'OE');
+                const ooWinners = winners.filter(w => w.combo === 'OO');
+
+                if (eeWinners.length > 0) {
+                    const share = Math.floor(currentPool / eeWinners.length);
+                    eeWinners.forEach(w => players[w.bettorId].coins += share);
+                    currentPool = 0;
+                    winnerSummary += `🏆 EE JACKPOT! ${eeWinners.map(w => players[w.bettorId].name).join(', ')} cleared the pool.`;
+                } else if (oeWinners.length > 0) {
+                    const totalWin = Math.floor(currentPool * 0.6);
+                    oeWinners.forEach(w => players[w.bettorId].coins += Math.floor(totalWin / oeWinners.length));
+                    currentPool -= totalWin;
+                    winnerSummary += `✅ OE MATCH: ${oeWinners.map(w => players[w.bettorId].name).join(', ')} won.`;
+                } else if (ooWinners.length > 0) {
+                    const totalWin = Math.floor(currentPool * 0.3);
+                    ooWinners.forEach(w => players[w.bettorId].coins += Math.floor(totalWin / ooWinners.length));
+                    currentPool -= totalWin;
+                    winnerSummary += `🆗 OO MATCH: ${ooWinners.map(w => players[w.bettorId].name).join(', ')} won.`;
+                } else {
+                    winnerSummary += "❌ No winning bets. Pool rolls over!";
+                }
             }
             winnerSummary += "</div>";
 
