@@ -200,7 +200,8 @@ document.addEventListener('DOMContentLoaded', () => {
             'tetris': '#00f5ff',
             'ultimate-ttt': '#a855f7',
             'safe-crossing': '#4ecdc4',
-            'pools': '#3b82f6'
+            'pools': '#3b82f6',
+            'the-flame': '#FF416C'
         };
 
         const color = gameColors[gameId] || '#6366f1';
@@ -265,6 +266,10 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'pools':
                 gameTitle.innerText = 'Pools';
                 loadPools();
+                break;
+            case 'the-flame':
+                gameTitle.innerText = 'THE FLAME';
+                loadTheFlame();
                 break;
             default:
                 console.error('Unknown game ID:', gameId);
@@ -356,12 +361,17 @@ document.addEventListener('DOMContentLoaded', () => {
         `,
         'pools': () => `
             <ul>
-                <li>Goal: Predict the card combinations of other players to earn coins. Reach 100 to win.</li>
-                <li>Each player gets 2 cards (1-10). The host also has 2 secret cards.</li>
-                <li>Pay to reveal host cards: 1 coin for the 1st card, 3 coins for the 2nd.</li>
-                <li>Bet on a player\'s hand: <strong>Even-Even</strong>, <strong>Odd-Even</strong>, or <strong>Odd-Odd</strong>.</li>
-                <li><strong>Payouts:</strong> EE (100% pool), OE (60% pool), OO (30% pool).</li>
                 <li>If you guess wrongly, the player you bet on gets a small compensation!</li>
+            </ul>
+        `,
+        'the-flame': () => `
+            <ul>
+                <li>Enter two names to see what destiny has in store for them.</li>
+                <li>The algorithm analyzes letter repetitions and reduces them to a core numeric value.</li>
+                <li>This value determines the "FLAMES" result:</li>
+                <li><strong>F</strong>: Friends | <strong>L</strong>: Lovers | <strong>A</strong>: Affection</li>
+                <li><strong>M</strong>: Marriage | <strong>E</strong>: Enemies | <strong>S</strong>: Siblings</li>
+                <li>Results are calculated with precision—trust the logic... or don't!</li>
             </ul>
         `
     };
@@ -2888,6 +2898,177 @@ document.addEventListener('DOMContentLoaded', () => {
         return () => {
             window.removeEventListener('keydown', handlePoolsCheat);
         };
+    }
+
+    // --- THE FLAME ---
+    function loadTheFlame() {
+        gameContainer.innerHTML = `
+            <div class="flame-container">
+                <div class="flame-card-ui">
+                    <div class="flame-title-area">
+                        <h2>THE FLAME</h2>
+                    </div>
+                    <div class="flame-input-group">
+                        <div class="flame-field">
+                            <label for="flame-name1">Name 1</label>
+                            <input type="text" id="flame-name1" class="flame-input" placeholder="Enter first name..." autocomplete="off">
+                        </div>
+                        <div class="flame-field">
+                            <label for="flame-name2">Name 2</label>
+                            <input type="text" id="flame-name2" class="flame-input" placeholder="Enter second name..." autocomplete="off">
+                        </div>
+                    </div>
+                    <button id="btn-calculate-flame" class="btn-flame-calculate">Check Destiny</button>
+                </div>
+
+                <div id="flame-loading" class="flame-loading-overlay">
+                    <div class="flame-fire-container">
+                        <div class="fire-eye"></div>
+                    </div>
+                    <div class="flame-loading-text">SOLVING FATE...</div>
+                </div>
+
+                <div id="flame-result" class="flame-result-screen">
+                    <div id="flame-letter" class="flame-result-letter">F</div>
+                    <div id="flame-meaning" class="flame-result-meaning">FRIENDS</div>
+                    <div id="flame-sub" class="flame-result-sub">Destiny has spoken. These souls are bound by the threads of friendship.</div>
+                    <button id="btn-flame-retry" class="btn-secondary">Try Another Pair</button>
+                </div>
+            </div>
+        `;
+        currentGameCleanup = initTheFlameLogic();
+    }
+
+    function initTheFlameLogic() {
+        const name1Input = document.getElementById('flame-name1');
+        const name2Input = document.getElementById('flame-name2');
+        const calcBtn = document.getElementById('btn-calculate-flame');
+        const loading = document.getElementById('flame-loading');
+        const resultScreen = document.getElementById('flame-result');
+        const cardUi = document.querySelector('.flame-card-ui');
+        
+        const letterEl = document.getElementById('flame-letter');
+        const meaningEl = document.getElementById('flame-meaning');
+        const subEl = document.getElementById('flame-sub');
+        const retryBtn = document.getElementById('btn-flame-retry');
+
+        const flamesMap = {
+            'F': { meaning: 'FRIENDS', sub: 'Destiny has spoken. These souls are bound by the threads of friendship.' },
+            'L': { meaning: 'LOVERS', sub: 'The stars align. A profound romance is written in the tapestry of time.' },
+            'A': { meaning: 'AFFECTION', sub: 'A deep, unspoken warmth exists between these two. A bond that transcends words.' },
+            'M': { meaning: 'MARRIAGE', sub: 'Two paths become one. A lifelong journey of unity and shared dreams awaits.' },
+            'E': { meaning: 'ENEMIES', sub: 'A clash of wills. Some souls are destined to challenge and oppose each other.' },
+            'S': { meaning: 'SIBLINGS', sub: 'A familial bond, strong and enduring. Like two branches of the same tree.' }
+        };
+
+        function calculateflames(n1, n2) {
+            // Step 1: Count repetitions
+            const combinedNames = (n1 + n2).toUpperCase().replace(/\s/g, '');
+            const counts = [];
+            for (let i = 0; i < combinedNames.length; i++) {
+                const char = combinedNames[i];
+                let count = 0;
+                for (let j = 0; j < combinedNames.length; j++) {
+                    if (combinedNames[j] === char) count++;
+                }
+                counts.push(count);
+            }
+
+            // Step 2: Number reduction (Interleaved Zig-Zag)
+            let sequence = counts;
+            while (sequence.length > 1) {
+                let sums = [];
+                let left = 0;
+                let right = sequence.length - 1;
+                while (left <= right) {
+                    if (left === right) {
+                        sums.push(sequence[left]);
+                    } else {
+                        sums.push(sequence[left] + sequence[right]);
+                    }
+                    left++;
+                    right--;
+                }
+
+                // Zig-Zag placement logic based on prompt:
+                // S1 (index 0), S2 (end), S3 (next to r1), S4 (end-1)...
+                let zigZag = new Array(sums.length);
+                let zLeft = 0;
+                let zRight = sums.length - 1;
+                for (let i = 0; i < sums.length; i++) {
+                    if (i % 2 === 0) {
+                        zigZag[zLeft++] = sums[i];
+                    } else {
+                        zigZag[zRight--] = sums[i];
+                    }
+                }
+                
+                // If the sum becomes multi-digit, split them or reduce? 
+                // Description says "until u get a single digit number".
+                // We'll flatten the zigZag into its digits if needed to keep it simple and robust
+                let nextSeq = [];
+                zigZag.forEach(num => {
+                    const s = num.toString();
+                    for (let char of s) nextSeq.push(parseInt(char));
+                });
+                sequence = nextSeq;
+
+                // Safety: if it's already 1 digit, but the loop continues, break
+                if (sequence.length === 1) break;
+            }
+
+            const finalNum = sequence[0];
+
+            // Step 3: FLAMES Elimination
+            let flames = ['F', 'L', 'A', 'M', 'E', 'S'];
+            let currIdx = 0;
+            while (flames.length > 1) {
+                currIdx = (currIdx + finalNum - 1) % flames.length;
+                flames.splice(currIdx, 1);
+            }
+
+            return flames[0];
+        }
+
+        calcBtn.onclick = () => {
+            const val1 = name1Input.value.trim();
+            const val2 = name2Input.value.trim();
+
+            if (!val1 || !val2) {
+                calcBtn.innerText = "NAME BOTH SOULS!";
+                setTimeout(() => calcBtn.innerText = "Check Destiny", 1500);
+                return;
+            }
+
+            // Hide UI
+            cardUi.style.display = 'none';
+            loading.classList.add('active');
+
+            // Aesthetic Delay
+            setTimeout(() => {
+                const resultLetter = calculateflames(val1, val2);
+                const info = flamesMap[resultLetter];
+
+                loading.classList.remove('active');
+                resultScreen.classList.add('active');
+
+                letterEl.innerText = resultLetter;
+                meaningEl.innerText = info.meaning;
+                subEl.innerText = info.sub;
+
+                // Big celebration
+                showCelebration(`THE FLAME has spoken for ${val1} and ${val2}: ${info.meaning}!`);
+            }, 3000);
+        };
+
+        retryBtn.onclick = () => {
+            resultScreen.classList.remove('active');
+            cardUi.style.display = 'flex';
+            name1Input.value = '';
+            name2Input.value = '';
+        };
+
+        return () => {};
     }
 
 });
