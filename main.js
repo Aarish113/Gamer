@@ -115,7 +115,8 @@ document.addEventListener('DOMContentLoaded', () => {
         "messi", "lionel", "ronaldo", "cristiano", "neymar", "mbappe", "pele", "maradona", "zidane", "beckham", "ronaldinho", "haaland", "einstein", "newton", "musk", "elon", "jobs", "steve", "gates", "bill", "trump", "donald", "biden", "joe", "obama", "barack"
     ];
 
-    startBtn.addEventListener('click', () => {
+    startBtn.addEventListener('click', (e) => {
+        if (e) e.preventDefault();
         const rawName = nameInput.value.trim();
         const nameUpper = rawName.toUpperCase();
         
@@ -123,10 +124,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const nameRegex = /^[A-Z\s]+$/i;
         
         if (!rawName) {
+            nameErrorMsg.innerText = "Please enter your name, hero!";
+            nameErrorMsg.style.display = 'block';
             isInvalid = true;
-            nameErrorMsg.style.display = 'none';
         } else if (!nameRegex.test(rawName)) {
-            nameErrorMsg.innerText = "GET THE SHIT OUT!!!";
+            nameErrorMsg.innerText = "Letters and spaces only, please!";
             nameErrorMsg.style.display = 'block';
             isInvalid = true;
         } else {
@@ -139,19 +141,38 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             if (hasBlacklist) {
-                nameErrorMsg.innerText = "GET THE SHIT OUT!!!";
+                nameErrorMsg.innerText = "This name is reserved for legends!";
                 nameErrorMsg.style.display = 'block';
                 isInvalid = true;
             }
         }
 
         if (!isInvalid) {
+            console.log("Proceeding to dashboard as:", rawName);
             playerName = rawName;
-            dashboardTitle.innerText = `Welcome, ${playerName}!`;
-            nameErrorMsg.style.display = 'none';
-            welcomeScreen.style.display = 'none';
-            appContainer.style.display = 'flex';
+            
+            // Personalize Dashboard
+            if (dashboardTitle) dashboardTitle.innerText = `Welcome, ${playerName}!`;
+            
+            // Hide Overlays
+            if (nameErrorMsg) nameErrorMsg.style.display = 'none';
+            if (welcomeScreen) welcomeScreen.style.display = 'none';
+            
+            // Show App
+            if (appContainer) {
+                appContainer.style.display = 'flex';
+                // Force a switch to dashboard view to be safe
+                switchView('dashboard');
+            }
+            
+            // Final safety: ensure preloader is hidden
+            const preloader = document.getElementById('game-preloader');
+            if (preloader) {
+                preloader.style.opacity = '0';
+                setTimeout(() => preloader.classList.remove('active'), 500);
+            }
         } else {
+            console.log("Validation failed for name:", rawName);
             nameInput.style.borderColor = '#ef4444';
             setTimeout(() => nameInput.style.borderColor = 'var(--glass-border)', 1000);
         }
@@ -162,15 +183,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Enter') startBtn.click();
     });
 
-    // Use event delegation for game cards and buttons - much more robust
+    // Use event delegation for game cards - only for elements within the dashboard grid
     document.addEventListener('click', (e) => {
-        const playBtn = e.target.closest('.btn-play');
         const gameCard = e.target.closest('.game-card');
-        
-        if (playBtn || gameCard) {
-            const gameId = (playBtn ? playBtn.closest('.game-card') : gameCard).dataset.game;
-            console.log('Launching game:', gameId);
-            launchGame(gameId);
+        if (gameCard) {
+            const gameId = gameCard.dataset.game;
+            if (gameId) {
+                console.log('Launching game:', gameId);
+                launchGame(gameId);
+            }
         }
     });
 
@@ -361,6 +382,7 @@ document.addEventListener('DOMContentLoaded', () => {
         `,
         'pools': () => `
             <ul>
+                <li>First player to reach <strong>40 coins</strong> wins the table!</li>
                 <li>If you guess wrongly, the player you bet on gets a small compensation!</li>
             </ul>
         `,
@@ -2230,98 +2252,138 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
 
                 <div id="pools-game" style="display: none; width: 100%;">
-                    <div class="pools-table">
-                        <div class="pools-table-inner" id="pools-table-inner">
-                            <!-- Seat 2 (Top) -->
-                            <div id="p2" class="player-seat seat-2">
-                                <div class="avatar-wrap computer" id="avatar-p2"></div>
-                                <div class="player-meta">
-                                    <span class="player-name">Computer 2</span>
-                                    <div class="player-coins">10</div>
+                    <div class="pools-game-layout">
+                        <!-- Left Side: Chips Selection -->
+                        <div id="betting-controls-left" class="betting-side-panel left" style="visibility: hidden;">
+                            <div class="betting-section">
+                                <span class="section-label">Select Chips</span>
+                                <div class="chip-group">
+                                    <button class="chip-btn chip-1" data-val="1">1</button>
+                                    <button class="chip-btn chip-3" data-val="3">3</button>
+                                    <button class="chip-btn chip-5" data-val="5">5</button>
+                                    <button class="chip-btn chip-10" data-val="10">10</button>
                                 </div>
-                                <div class="player-cards-wrap" id="cards-p2"></div>
-                            </div>
-
-                            <!-- Seat 1 (Left) -->
-                            <div id="p1" class="player-seat seat-1">
-                                <div class="avatar-wrap computer" id="avatar-p1"></div>
-                                <div class="player-meta">
-                                    <span class="player-name">Computer 1</span>
-                                    <div class="player-coins">10</div>
+                                <div class="bet-display-wrap">
+                                    Bet: <span id="current-bet-display" style="font-weight: 900; color: #fbbf24; font-size: 1.5rem;">1</span>🪙
                                 </div>
-                                <div class="player-cards-wrap" id="cards-p1"></div>
                             </div>
+                        </div>
 
-                            <!-- Seat 3 (Right) -->
-                            <div id="p3" class="player-seat seat-3">
-                                <div class="avatar-wrap computer" id="avatar-p3"></div>
-                                <div class="player-meta">
-                                    <span class="player-name">Computer 3</span>
-                                    <div class="player-coins">10</div>
-                                </div>
-                                <div class="player-cards-wrap" id="cards-p3"></div>
-                            </div>
+                        <div class="table-area">
+                            <div class="pools-table">
+                                <div class="pools-table-inner" id="pools-table-inner">
+                                    <!-- Seat 2 (Top) -->
+                                    <div id="p2" class="player-seat seat-2">
+                                        <div class="player-info-block">
+                                            <div class="avatar-wrap computer" id="avatar-p2">
+                                                <div class="player-coins">10</div>
+                                            </div>
+                                            <div class="player-meta">
+                                                <span class="player-name">Computer 2</span>
+                                            </div>
+                                        </div>
+                                        <div class="player-cards-wrap" id="cards-p2"></div>
+                                    </div>
 
-                            <!-- Seat 0 (Bottom) -->
-                            <div id="p0" class="player-seat seat-0">
-                                <div class="avatar-wrap human" id="avatar-p0"></div>
-                                <div class="player-meta">
-                                    <span class="player-name">${playerName}</span>
-                                    <div class="player-coins">10</div>
-                                </div>
-                                <div class="player-cards-wrap" id="cards-p0"></div>
-                            </div>
+                                    <!-- Seat 1 (Left) -->
+                                    <div id="p1" class="player-seat seat-1">
+                                        <div class="player-info-block">
+                                            <div class="avatar-wrap computer" id="avatar-p1">
+                                                <div class="player-coins">10</div>
+                                            </div>
+                                            <div class="player-meta">
+                                                <span class="player-name">Computer 1</span>
+                                            </div>
+                                        </div>
+                                        <div class="player-cards-wrap" id="cards-p1"></div>
+                                    </div>
 
-                            <!-- Center: Pool and Dealer -->
-                            <div class="pool-center">
-                                <div class="dealer-wrap">
-                                    <div class="dealer-avatar" id="dealer-avatar"></div>
-                                    <div class="pool-box">
-                                        <div class="pool-label">Main Pool</div>
-                                        <div class="pool-value" id="pool-amount">0</div>
+                                    <!-- Seat 3 (Right) -->
+                                    <div id="p3" class="player-seat seat-3">
+                                        <div class="player-info-block">
+                                            <div class="avatar-wrap computer" id="avatar-p3">
+                                                <div class="player-coins">10</div>
+                                            </div>
+                                            <div class="player-meta">
+                                                <span class="player-name">Computer 3</span>
+                                            </div>
+                                        </div>
+                                        <div class="player-cards-wrap" id="cards-p3"></div>
+                                    </div>
+
+                                    <!-- Seat 0 (Bottom) -->
+                                    <div id="p0" class="player-seat seat-0">
+                                        <div class="player-info-block">
+                                            <div class="avatar-wrap human" id="avatar-p0">
+                                                <div class="player-coins">10</div>
+                                            </div>
+                                            <div class="player-meta">
+                                                <span class="player-name">${playerName}</span>
+                                            </div>
+                                        </div>
+                                        <div class="player-cards-wrap" id="cards-p0"></div>
+                                    </div>
+
+                                    <!-- Center: Pool and Dealer -->
+                                    <div class="pool-center">
+                                        <div class="center-top-row">
+                                            <div class="dealer-wrap">
+                                                <div class="dealer-avatar" id="dealer-avatar"></div>
+                                            </div>
+                                            <div class="host-reveals" id="host-cards"></div>
+                                        </div>
+                                        
+                                        <div class="pool-box">
+                                            <div class="pool-label">Main Pool</div>
+                                            <div class="pool-value" id="pool-amount">0</div>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="host-reveals" id="host-cards"></div>
-                                <div id="host-controls" style="display: flex; gap: 10px;">
-                                    <button id="btn-open-h1" class="btn-rules">Clue 1 (1🪙)</button>
-                                    <button id="btn-open-h2" class="btn-rules" disabled>Clue 2 (3🪙)</button>
+                            </div>
+                        </div>
+
+                        <!-- Right Side Sidebar -->
+                        <div id="betting-controls-right" class="betting-side-panel right" style="visibility: hidden;">
+                            <!-- Phase 1: Clues -->
+                            <div id="clue-box" class="betting-box" style="display: none;">
+                                <h3 style="text-align: center; color: #10b981; margin-bottom: 5px; font-size: 1rem;">Reveal Clues</h3>
+                                <div class="betting-section">
+                                    <button id="btn-open-h1" class="btn-action" style="font-size: 0.8rem; padding: 12px;">Clue 1 — 1🪙</button>
+                                    <button id="btn-open-h2" class="btn-action" style="font-size: 0.8rem; padding: 12px;" disabled>Clue 2 — 3🪙</button>
+                                    <div id="host-skip-container" style="margin-top: 5px;"></div>
                                 </div>
                             </div>
+
+                            <!-- Phase 2: Betting -->
+                            <div id="betting-box-combo" class="betting-box" style="display: none;">
+                                <h3 id="current-turn-label" style="text-align: center; color: #3b82f6; margin-bottom: 5px; font-size: 1rem;">Your Turn</h3>
+                                <div class="betting-section">
+                                    <span class="section-label">Predict Combo</span>
+                                    <div class="combination-btns">
+                                        <button class="combo-btn" data-combo="EE">EE</button>
+                                        <button class="combo-btn" data-combo="OE">OE</button>
+                                        <button class="combo-btn" data-combo="OO">OO</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="betting-box-confirm" class="betting-box" style="display: none; align-items: center;">
+                                <button id="btn-place-bet" class="btn-action" style="width: 100%;">Confirm Bet</button>
+                                <span id="target-hint" style="font-size: 0.7rem; color: #fbbf24; text-transform: uppercase; margin-top: 5px;">Select target on table</span>
+                            </div>
+
+                            <!-- Phase 3: Results -->
+                            <div id="results-box" class="betting-box" style="display: none; max-height: 500px; overflow-y: auto;">
+                                <h3 style="text-align: center; color: #fbbf24; margin-bottom: 10px; font-size: 1.1rem;">Round Summary</h3>
+                                <div id="results-content" style="display: flex; flex-direction: column; gap: 12px;"></div>
+                                <button id="btn-next-round" class="btn-action" style="width: 100%; margin-top: 15px;">Next Round</button>
+                            </div>
                         </div>
                     </div>
-
-                    <div class="betting-panel-v2" id="betting-controls" style="display: none; margin-left: auto; margin-right: auto;">
-                        <h3 id="current-turn-label" style="text-align: center; color: #3b82f6;">Your Turn</h3>
-                        
-                        <div style="display: flex; flex-direction: column; gap: 10px;">
-                            <span style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase;">Select Chip Amount:</span>
-                            <div class="chip-group">
-                                <button class="chip-btn chip-1" data-val="1">1</button>
-                                <button class="chip-btn chip-3" data-val="3">3</button>
-                                <button class="chip-btn chip-5" data-val="5">5</button>
-                                <button class="chip-btn chip-10" data-val="10">10</button>
-                            </div>
-                            <div style="text-align: center; margin-top: 5px;">
-                                Bet: <span id="current-bet-display" style="font-weight: 900; color: #fbbf24; font-size: 1.5rem;">1</span>🪙
-                            </div>
-                        </div>
-
-                        <div style="display: flex; flex-direction: column; gap: 10px;">
-                            <span style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase;">Target Opponent:</span>
-                            <div id="target-player-btns" class="bet-targets"></div>
-                        </div>
-
-                        <div style="display: flex; flex-direction: column; gap: 10px;">
-                            <span style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase;">Predict Combination:</span>
-                            <div class="combination-btns" style="justify-content: center;">
-                                <button class="combo-btn" data-combo="EE">Even-Even</button>
-                                <button class="combo-btn" data-combo="OE">Odd-Even</button>
-                                <button class="combo-btn" data-combo="OO">Odd-Odd</button>
-                            </div>
-                        </div>
-
-                        <button id="btn-place-bet" class="btn-action" style="width: 100%; margin-top: 10px;">Confirm Bet</button>
-                    </div>
+                    
+                    <!-- Hidden reference to betting-controls for initPoolsLogic compatibility -->
+                    <div id="betting-controls" style="display: none;"></div>
+                    <div id="target-player-btns" style="display: none;"></div>
 
                     <div id="pools-message" class="ttt-status" style="margin-top: 20px;"></div>
                 </div>
@@ -2333,14 +2395,26 @@ document.addEventListener('DOMContentLoaded', () => {
     function initPoolsLogic() {
         const setupDiv = document.getElementById('pools-setup');
         const gameDiv = document.getElementById('pools-game');
-        const setupBtns = document.querySelectorAll('.setup-btn');
         const messageEl = document.getElementById('pools-message');
         const poolEl = document.getElementById('pool-amount');
         const btnOpenH1 = document.getElementById('btn-open-h1');
         const btnOpenH2 = document.getElementById('btn-open-h2');
-        const bettingControls = document.getElementById('betting-controls');
+        const leftPanel = document.getElementById('betting-controls-left');
+        const rightPanel = document.getElementById('betting-controls-right');
+        
+        // Helper to toggle betting UI visibility
+        const toggleBettingUI = (show) => {
+            leftPanel.style.visibility = show ? 'visible' : 'hidden';
+            rightPanel.style.visibility = show ? 'visible' : 'hidden';
+            
+            if (show) {
+                document.getElementById('betting-box-combo').style.display = 'flex';
+                document.getElementById('betting-box-confirm').style.display = 'flex';
+                document.getElementById('clue-box').style.display = 'none';
+            }
+        };
+
         const turnLabel = document.getElementById('current-turn-label');
-        const targetBtnsContainer = document.getElementById('target-player-btns');
         const comboBtns = document.querySelectorAll('.combo-btn');
         const chipBtns = document.querySelectorAll('.chip-btn');
         const betDisplay = document.getElementById('current-bet-display');
@@ -2349,7 +2423,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Scale the table up slightly for more breathing space
         const table = document.querySelector('.pools-table');
-        if (table) table.style.width = 'min(800px, 95vw)';
+        if (table) table.style.width = 'min(700px, 95vw)';
 
         const AVATARS = {
             p0: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix',
@@ -2371,6 +2445,8 @@ document.addEventListener('DOMContentLoaded', () => {
         let bets = [];
         let roundOver = false;
         let currentSelectedBet = 1;
+        let selectedTargetId = null;
+        let selectedCombo = null;
         let cheatsEnabled = false;
         let cheatBuffer = "";
 
@@ -2461,8 +2537,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             setTimeout(() => {
-                bettingControls.style.display = 'none';
-                document.getElementById('host-controls').style.display = 'flex';
                 cuePhaseIndex = 0;
                 processCluePhase();
             }, players.length * 300 + 800);
@@ -2558,7 +2632,6 @@ document.addEventListener('DOMContentLoaded', () => {
         function processCluePhase() {
             players.forEach(p => document.getElementById(`p${p.id}`).classList.remove('active'));
             
-            // End clue phase if everyone decided or both clues open
             const clue1Open = !document.getElementById('host-card-0').classList.contains('hidden');
             const clue2Open = document.getElementById('host-card-1') && !document.getElementById('host-card-1').classList.contains('hidden');
             
@@ -2572,30 +2645,32 @@ document.addEventListener('DOMContentLoaded', () => {
             
             btnOpenH1.disabled = clue1Open || currentPlayer.coins < 1;
             btnOpenH2.disabled = !clue1Open || clue2Open || currentPlayer.coins < 3;
-            // Strict enforcement: Ensure clue 2 is disabled if clue 1 is NOT open
-            if (!clue1Open) btnOpenH2.disabled = true;
+            
+            const clueBox = document.getElementById('clue-box');
+            const bettingBoxCombo = document.getElementById('betting-box-combo');
+            const bettingBoxConfirm = document.getElementById('betting-box-confirm');
 
             if (currentPlayer.isHuman) {
-                messageEl.innerText = `${currentPlayer.name}'s chance to open clues.`;
+                clueBox.style.display = 'flex';
+                bettingBoxCombo.style.display = 'none';
+                bettingBoxConfirm.style.display = 'none';
+                rightPanel.style.visibility = 'visible';
+                
+                messageEl.innerText = ``;
                 if (!document.getElementById('btn-skip-clue')) {
                     const skipBtn = document.createElement('button');
                     skipBtn.id = 'btn-skip-clue';
                     skipBtn.className = 'btn-rules';
+                    skipBtn.style.width = '100%';
                     skipBtn.innerText = 'Pass Turn';
                     skipBtn.onclick = () => {
                         cuePhaseIndex++;
                         processCluePhase();
                     };
-                    document.getElementById('host-controls').appendChild(skipBtn);
-                } else {
-                    document.getElementById('btn-skip-clue').style.display = 'inline-block';
-                }
-            } else {
                 if (document.getElementById('btn-skip-clue')) document.getElementById('btn-skip-clue').style.display = 'none';
                 btnOpenH1.disabled = true;
                 btnOpenH2.disabled = true;
                 
-                messageEl.innerText = `${currentPlayer.name} is thinking about revealing clues...`;
                 setTimeout(() => {
                     // AI Decision
                     let acted = false;
@@ -2623,7 +2698,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const el = document.getElementById('host-card-0');
                 el.classList.remove('hidden');
                 el.innerText = hostCards[0];
-                messageEl.innerText = `${player.name} paid 1🪙 for Clue 1!`;
             } else {
                 player.coins -= 3;
                 pool += 3;
@@ -2631,7 +2705,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const el = document.getElementById('host-card-1');
                 el.classList.remove('hidden');
                 el.innerText = hostCards[1];
-                messageEl.innerText = `${player.name} paid 3🪙 for Clue 2!`;
             }
             updatePoolUI();
             updatePlayerUI();
@@ -2652,9 +2725,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         function startBettingPhase() {
-            if (document.getElementById('btn-skip-clue')) document.getElementById('btn-skip-clue').style.display = 'none';
-            document.getElementById('host-controls').style.display = 'none';
-            bettingControls.style.display = 'flex';
+            if (document.getElementById('btn-skip-clue')) document.getElementById('btn-skip-clue').remove();
+            document.getElementById('clue-box').style.display = 'none';
+            
+            toggleBettingUI(true);
             currentBettorIndex = 0;
             processNextBettor();
         }
@@ -2673,7 +2747,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 turnLabel.innerText = `${bettor.name}'s Bet`;
                 renderBettingUI();
             } else {
-                bettingControls.style.display = 'none';
+                toggleBettingUI(false);
                 setTimeout(() => {
                     makeAiBet(bettor);
                     currentBettorIndex++;
@@ -2683,19 +2757,31 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         function renderBettingUI() {
-            bettingControls.style.display = 'flex';
+            toggleBettingUI(true);
             const bettor = players[currentBettorIndex];
-            targetBtnsContainer.innerHTML = players
-                .filter(p => p.id !== bettor.id)
-                .map(p => `<button class="target-btn" data-id="${p.id}">${p.name}</button>`)
-                .join('');
+            selectedTargetId = null;
+            selectedCombo = null;
             
-            document.querySelectorAll('.target-btn').forEach(btn => {
-                btn.onclick = () => {
-                    document.querySelectorAll('.target-btn').forEach(b => b.classList.remove('selected'));
-                    btn.classList.add('selected');
+            // Clear previous selections
+            players.forEach(p => {
+                const el = document.getElementById(`p${p.id}`);
+                el.classList.remove('selectable-target', 'target-selected');
+                el.onclick = null;
+            });
+
+            // Set up click-to-select targets
+            players.filter(p => p.id !== bettor.id).forEach(p => {
+                const el = document.getElementById(`p${p.id}`);
+                el.classList.add('selectable-target');
+                el.onclick = () => {
+                    players.forEach(opp => document.getElementById(`p${opp.id}`).classList.remove('target-selected'));
+                    el.classList.add('target-selected');
+                    selectedTargetId = p.id;
+                    document.getElementById('target-hint').innerText = `Target: ${p.name}`;
                 };
             });
+            
+            document.getElementById('target-hint').innerText = "Select target on table";
 
             chipBtns.forEach(btn => {
                 btn.classList.remove('selected');
@@ -2715,30 +2801,37 @@ document.addEventListener('DOMContentLoaded', () => {
                 btn.onclick = () => {
                     comboBtns.forEach(b => b.classList.remove('selected'));
                     btn.classList.add('selected');
+                    selectedCombo = btn.dataset.combo;
                 };
             });
         }
 
         btnPlaceBet.onclick = () => {
-            const bettor = players[currentBettorIndex];
-            const targetId = document.querySelector('.target-btn.selected')?.dataset.id;
-            const combo = document.querySelector('.combo-btn.selected')?.dataset.combo;
-            const amount = currentSelectedBet;
-
-            if (!targetId || !combo) {
-                messageEl.innerText = "Select target and combo!";
+            if (!selectedTargetId || !selectedCombo) {
+                messageEl.innerText = "Please select a target and combination first!";
                 return;
             }
+            const bettor = players[currentBettorIndex];
+            if (bettor.coins < currentSelectedBet) return;
 
-            bettor.coins -= amount;
-            pool += amount;
-            animateCoin(bettor.id, Math.min(amount, 5));
-            bets.push({ bettorId: bettor.id, targetId: parseInt(targetId), combo, amount });
+            bettor.coins -= currentSelectedBet;
+            pool += currentSelectedBet;
+            bets.push({ bettorId: bettor.id, targetId: parseInt(selectedTargetId), combo: selectedCombo, amount: currentSelectedBet });
             
+            animateCoin(bettor.id, currentSelectedBet);
             updatePoolUI();
             updatePlayerUI();
+            toggleBettingUI(false);
+            
+            // Clean up table selection
+            players.forEach(p => {
+                const el = document.getElementById(`p${p.id}`);
+                el.classList.remove('selectable-target', 'target-selected');
+                el.onclick = null;
+            });
+
             currentBettorIndex++;
-            processNextBettor();
+            setTimeout(processNextBettor, 1000);
         };
 
         function makeAiBet(aiPlayer) {
@@ -2755,98 +2848,115 @@ document.addEventListener('DOMContentLoaded', () => {
             bets.push({ bettorId: aiPlayer.id, targetId: target.id, combo, amount });
             updatePoolUI();
             updatePlayerUI();
-            messageEl.innerText = `${aiPlayer.name} placed a bet on ${target.name}.`;
         }
 
         function resolveRound() {
             roundOver = true;
-            bettingControls.style.display = 'none';
+            toggleBettingUI(false);
             renderPlayerCards();
             renderHostCards(false);
 
-            let log = `<h3 style="text-align: center; margin-bottom: 20px;">Table Summary</h3>
-                        <div class="results-table">
-                            <div class="results-header">Player</div>
-                            <div class="results-header">Cards</div>
-                            <div class="results-header" style="text-align: right;">Result</div>`;
-            
-            const playerResults = {}; 
+            const resultsBox = document.getElementById('results-box');
+            const resultsContent = document.getElementById('results-content');
+            const bettingBoxCombo = document.getElementById('betting-box-combo');
+            const bettingBoxConfirm = document.getElementById('betting-box-confirm');
+            const clueBox = document.getElementById('clue-box');
 
+            if (clueBox) clueBox.style.display = 'none';
+            if (bettingBoxCombo) bettingBoxCombo.style.display = 'none';
+            if (bettingBoxConfirm) bettingBoxConfirm.style.display = 'none';
+            if (resultsBox) resultsBox.style.display = 'flex';
+            rightPanel.style.visibility = 'visible';
+
+            // 1. Calculate Results
+            const playerResults = {};
             players.forEach(p => {
                 const isC1Even = p.cards[0] % 2 === 0;
                 const isC2Even = p.cards[1] % 2 === 0;
-                let actualCombo = (isC1Even && isC2Even) ? "EE" : (!isC1Even && !isC2Even) ? "OO" : "OE";
-                playerResults[p.id] = actualCombo;
-                const comboDesc = actualCombo === "EE" ? "Even-Even" : actualCombo === "OO" ? "Odd-Odd" : "Odd-Even";
-                log += `<div class="results-row">${p.name}</div>
-                        <div class="results-row" style="letter-spacing: 2px; font-weight: 800;">${p.cards[0]}, ${p.cards[1]}</div>
-                        <div class="results-row" style="color: #3b82f6; font-weight: 900; text-align: right;">${comboDesc}</div>`;
+                playerResults[p.id] = (isC1Even && isC2Even) ? "EE" : (!isC1Even && !isC2Even) ? "OO" : "OE";
             });
-            log += "</div>";
 
+            // 2. Distribute Money
             const winners = [];
             const compensations = [];
-
             bets.forEach(bet => {
-                const targetResult = playerResults[bet.targetId];
-                if (bet.combo === targetResult) {
-                    winners.push({ bettorId: bet.bettorId, combo: bet.combo });
+                if (bet.combo === playerResults[bet.targetId]) {
+                    winners.push({ bettorId: bet.bettorId, combo: bet.combo, amount: bet.amount });
                 } else {
                     compensations.push({ targetId: bet.targetId, amount: Math.max(1, Math.floor(bet.amount * 0.5)) });
                 }
             });
 
             let currentPool = pool;
-            let winnerSummary = "<div class='winner-banner'>";
+            compensations.forEach(c => {
+                const amount = Math.min(currentPool, c.amount);
+                players[c.targetId].coins += amount;
+                currentPool -= amount;
+            });
 
-            if (cheatsEnabled) {
-                players[0].coins += currentPool;
-                winnerSummary += `💰 BRIBE SUCCESSFUL! You pocketed the entire pool of ${currentPool}🪙.`;
-                currentPool = 0;
-            } else {
-                compensations.forEach(c => {
-                    const amount = Math.min(currentPool, c.amount);
-                    players[c.targetId].coins += amount;
-                    currentPool -= amount;
-                });
-
-                const eeWinners = winners.filter(w => w.combo === 'EE');
-                const oeWinners = winners.filter(w => w.combo === 'OE');
-                const ooWinners = winners.filter(w => w.combo === 'OO');
-
-                if (eeWinners.length > 0) {
-                    const share = Math.floor(currentPool / eeWinners.length);
-                    eeWinners.forEach(w => players[w.bettorId].coins += share);
-                    currentPool = 0;
-                    winnerSummary += `🏆 EE JACKPOT! ${eeWinners.map(w => players[w.bettorId].name).join(', ')} cleared the pool.`;
-                } else if (oeWinners.length > 0) {
-                    const totalWin = Math.floor(currentPool * 0.6);
-                    oeWinners.forEach(w => players[w.bettorId].coins += Math.floor(totalWin / oeWinners.length));
-                    currentPool -= totalWin;
-                    winnerSummary += `✅ OE MATCH: ${oeWinners.map(w => players[w.bettorId].name).join(', ')} won.`;
-                } else if (ooWinners.length > 0) {
-                    const totalWin = Math.floor(currentPool * 0.3);
-                    ooWinners.forEach(w => players[w.bettorId].coins += Math.floor(totalWin / ooWinners.length));
-                    currentPool -= totalWin;
-                    winnerSummary += `🆗 OO MATCH: ${ooWinners.map(w => players[w.bettorId].name).join(', ')} won.`;
-                } else {
-                    winnerSummary += "❌ No winning bets. Pool rolls over!";
-                }
+            const winningBets = winners.length;
+            if (winningBets > 0) {
+                const share = Math.floor(currentPool / winningBets);
+                winners.forEach(w => players[w.bettorId].coins += share);
+                currentPool = currentPool % winningBets;
             }
-            winnerSummary += "</div>";
-
             pool = currentPool;
+
+            // 3. Generate Summary HTML
+            let html = "";
+            
+            // Cards Summary
+            html += `<div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
+                        <span style="font-size: 0.65rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 8px;">Player Hands</span>
+                        <div style="display: grid; grid-template-columns: 1fr; gap: 6px;">`;
+            players.forEach(p => {
+                const comboStr = playerResults[p.id];
+                html += `<div style="display: flex; justify-content: space-between; font-size: 0.8rem; align-items: center;">
+                            <span style="color: #cbd5e1;">${p.name}</span>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <span style="color: #fbbf24; font-weight: 800; font-family: monospace;">${p.cards[0]} ${p.cards[1]}</span>
+                                <span style="font-size: 0.65rem; background: rgba(59, 130, 246, 0.2); padding: 2px 6px; border-radius: 4px; color: #3b82f6;">${comboStr}</span>
+                            </div>
+                         </div>`;
+            });
+            html += `</div></div>`;
+
+            // Bets Summary
+            html += `<div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
+                        <span style="font-size: 0.65rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 8px;">Round Bets</span>
+                        <div style="display: flex; flex-direction: column; gap: 8px;">`;
+            bets.forEach(bet => {
+                const bettor = players[bet.bettorId];
+                const target = players[bet.targetId];
+                const success = bet.combo === playerResults[bet.targetId];
+                const icon = success ? "✅" : "❌";
+                html += `<div style="font-size: 0.75rem; color: #e2e8f0; line-height: 1.4;">
+                            <span style="color: #94a3b8;">${bettor.name}</span> bet <b>${bet.amount}🪙</b> on <span style="color: #94a3b8;">${target.name}</span> as <b>${bet.combo}</b> ${icon}
+                         </div>`;
+            });
+            if (bets.length === 0) html += `<div style="font-size: 0.75rem; color: #94a3b8; font-style: italic;">No bets placed this round.</div>`;
+            html += `</div></div>`;
+
+            resultsContent.innerHTML = html;
             updatePoolUI();
             updatePlayerUI();
-            messageEl.innerHTML = log + winnerSummary;
-            
-            setTimeout(() => checkWin(), 8000);
+
+            document.getElementById('btn-next-round').onclick = () => {
+                const tableWinner = players.find(p => p.coins >= 40);
+                if (tableWinner) {
+                    if (tableWinner.isHuman) showCelebration(`${tableWinner.name} reached 40 coins and wins the table!`);
+                    else window.showLossScreen(`${tableWinner.name} won. Better luck next time.`);
+                } else {
+                    resultsBox.style.display = 'none';
+                    startNewRound();
+                }
+            };
         }
 
         function checkWin() {
-            const winner = players.find(p => p.coins >= 100);
+            const winner = players.find(p => p.coins >= 40);
             if (winner) {
-                if (winner.isHuman) showCelebration(`${winner.name} reached 100 coins and wins the table!`);
+                if (winner.isHuman) showCelebration(`${winner.name} reached 40 coins and wins the table!`);
                 else window.showLossScreen(`${winner.name} won. Better luck next time, ${playerName}.`);
             } else {
                 const nextContainer = document.createElement('div');
