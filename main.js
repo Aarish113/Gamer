@@ -179,9 +179,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Also support 'Enter' key
-    nameInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') startBtn.click();
-    });
+    if (nameInput) {
+        nameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && startBtn) startBtn.click();
+        });
+    }
 
     // Use event delegation for game cards - only for elements within the dashboard grid
     document.addEventListener('click', (e) => {
@@ -195,10 +197,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    backBtn.addEventListener('click', () => {
-        console.log('Back to dashboard');
-        switchView('dashboard');
-    });
+    if (backBtn) {
+        backBtn.addEventListener('click', () => {
+            console.log('Back to dashboard');
+            switchView('dashboard');
+        });
+    }
 
     function launchGame(gameId) {
         toggleSidebar(true); // Auto-collapse when game starts
