@@ -2990,8 +2990,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     right--;
                 }
 
-                // Zig-Zag placement logic based on prompt:
-                // S1 (index 0), S2 (end), S3 (next to r1), S4 (end-1)...
+                // Zig-Zag placement: S1 (idx 0), S2 (end), S3 (idx 1), S4 (end-1)...
                 let zigZag = new Array(sums.length);
                 let zLeft = 0;
                 let zRight = sums.length - 1;
@@ -3003,27 +3002,24 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
                 
-                // If the sum becomes multi-digit, split them or reduce? 
-                // Description says "until u get a single digit number".
-                // We'll flatten the zigZag into its digits if needed to keep it simple and robust
-                let nextSeq = [];
-                zigZag.forEach(num => {
-                    const s = num.toString();
-                    for (let char of s) nextSeq.push(parseInt(char));
-                });
-                sequence = nextSeq;
+                // FIXED: Do NOT split digits here. Use the actual sums to maintain variance.
+                sequence = zigZag;
 
-                // Safety: if it's already 1 digit, but the loop continues, break
                 if (sequence.length === 1) break;
             }
 
+            // If the final number is somehow multi-digit (it will be), 
+            // we can reduce it to a single digit for standard elimination variety,
+            // or just use it directly. Using it directly is best for variance.
             const finalNum = sequence[0];
 
             // Step 3: FLAMES Elimination
             let flames = ['F', 'L', 'A', 'M', 'E', 'S'];
             let currIdx = 0;
             while (flames.length > 1) {
+                // Std FLAMES elimination formula
                 currIdx = (currIdx + finalNum - 1) % flames.length;
+                if (currIdx < 0) currIdx += flames.length;
                 flames.splice(currIdx, 1);
             }
 
@@ -3052,12 +3048,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 loading.classList.remove('active');
                 resultScreen.classList.add('active');
 
-                letterEl.innerText = resultLetter;
-                meaningEl.innerText = info.meaning;
-                subEl.innerText = info.sub;
-
-                // Big celebration
-                showCelebration(`THE FLAME has spoken for ${val1} and ${val2}: ${info.meaning}!`);
+                // Reveal with Shuffle Effect
+                let iterations = 0;
+                const letters = ['F', 'L', 'A', 'M', 'E', 'S'];
+                const shuffleInterval = setInterval(() => {
+                    letterEl.innerText = letters[Math.floor(Math.random() * letters.length)];
+                    iterations++;
+                    
+                    if (iterations > 15) {
+                        clearInterval(shuffleInterval);
+                        letterEl.innerText = resultLetter;
+                        meaningEl.innerText = info.meaning;
+                        subEl.innerText = info.sub;
+                    }
+                }, 80);
             }, 3000);
         };
 

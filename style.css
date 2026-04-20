@@ -2703,32 +2703,39 @@ header p {
 }
 
 .flame-result-letter {
-    font-size: 15rem;
+    font-size: 18rem;
     font-weight: 900;
     line-height: 1;
-    background: linear-gradient(135deg, #FF4B2B, #FF416C, #FFD200);
+    background: linear-gradient(135deg, #FF4B2B, #FF416C, #FFD200, #3b82f6);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
-    filter: drop-shadow(0 0 30px rgba(255, 65, 108, 0.5));
-    animation: popAndFloat 3s infinite ease-in-out;
+    filter: drop-shadow(0 0 50px rgba(255, 65, 108, 0.6));
+    animation: popAndFloatPremium 4s infinite ease-in-out;
+    text-shadow: 0 0 80px rgba(255, 65, 108, 0.4);
 }
 
-@keyframes popAndFloat {
-    0% { transform: scale(0.5) rotate(-10deg); opacity: 0; }
-    20% { transform: scale(1.1) rotate(0deg); opacity: 1; }
-    30% { transform: scale(1) rotate(0deg); }
-    50% { transform: translateY(-20px) rotate(5deg); }
-    100% { transform: translateY(0) rotate(0deg); }
+@keyframes popAndFloatPremium {
+    0% { transform: scale(0.3) rotate(-20deg); opacity: 0; filter: blur(10px); }
+    15% { transform: scale(1.2) rotate(5deg); opacity: 1; filter: blur(0); }
+    25% { transform: scale(1) rotate(0deg); }
+    50% { transform: translateY(-30px) scale(1.05); filter: drop-shadow(0 0 70px rgba(255, 65, 108, 0.8)); }
+    100% { transform: translateY(0) scale(1); }
 }
 
 .flame-result-meaning {
-    font-size: 2.5rem;
-    font-weight: 800;
+    font-size: 3.5rem;
+    font-weight: 900;
     color: white;
     text-transform: uppercase;
-    letter-spacing: 10px;
+    letter-spacing: 15px;
     text-align: center;
+    background: linear-gradient(to bottom, #fff, #aaa);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.3));
+    margin-top: -20px;
 }
 
 .flame-result-sub {
