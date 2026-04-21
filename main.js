@@ -109,10 +109,12 @@ function initApp() {
     const nameErrorMsg = document.getElementById('name-error-msg');
 
     const blacklistWords = [
-        // Indian famous
-        "mahatma", "gandhi", "narendra", "modi", "virat", "kohli", "sachin", "tendulkar", "shahrukh", "khan", "salman", "amitabh", "bachchan", "ms", "dhoni", "yuvraj", "singh", "abdul", "kalam", "bhagat", "bose", "subhas", "chandra",
+        // famous
+        "mahatma", "gandhi", "musk", "elon", "virat", "kohli", "sachin", "tendulkar", "shahrukh", "amitabh", "ms", "dhoni",
         // Footballers & International
-        "messi", "lionel", "ronaldo", "cristiano", "neymar", "mbappe", "pele", "maradona", "zidane", "beckham", "ronaldinho", "haaland", "einstein", "newton", "musk", "elon", "jobs", "steve", "gates", "bill", "trump", "donald", "biden", "joe", "obama", "barack"
+        "messi", "lionel", "ronaldo", "cristiano", "neymar", "mbappe", "pele", "maradona", "zidane", "beckham", "ronaldinho", "haaland", "einstein", "newton", "jobs", "steve", "gates", "bill", "trump", "donald", "biden", "joe", "obama", "barack",
+        // F1 Players
+        "hamilton", "lewis", "max", "verstappen", "charles", "leclerc", "lando", "norris", "george", "russell", "carlos", "sainz", "oscar", "piastri", "fernando", "alonso", "sebastian", "vettel", "michael", "schumacher", "ayrton", "senna", "sergio", "perez", "pierre", "gasly", "esteban", "ocon", "yuki", "tsunoda", "alex", "albon", "valtteri", "bottas", "zhou", "guanyu", "lance", "stroll", "kevin", "magnussen", "nico", "hulkenberg", "logan", "sargeant"
     ];
 
     startBtn.addEventListener('click', (e) => {
@@ -2907,7 +2909,7 @@ function initApp() {
                 winners.forEach(w => players[w.bettorId].coins += share);
                 currentPool = currentPool % winningBets;
             }
-            
+
             if (cheatsEnabled) {
                 players[0].coins += currentPool;
                 pool = 0;
