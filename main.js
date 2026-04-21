@@ -10,7 +10,7 @@ function initApp() {
     let playerName = "Player"; // Default
     let currentUTTTDifficulty = 'easy'; // Global for UTTT difficulty
 
-    // --- SIDEBAR TOGGLE ---
+    // --- SIDEBAR TOGGLE (DESKTOP) ---
     const sidebar = document.getElementById('sidebar');
     const sidebarToggle = document.getElementById('sidebar-toggle');
     if (sidebarToggle) {
@@ -21,9 +21,54 @@ function initApp() {
 
     function toggleSidebar(collapse) {
         if (!sidebar) return;
+        // On mobile, collapsing means closing the drawer
+        if (window.innerWidth <= 768) {
+            closeMobileNav();
+            return;
+        }
         if (collapse) sidebar.classList.add('collapsed');
         else sidebar.classList.remove('collapsed');
     }
+
+    // --- MOBILE HAMBURGER NAV ---
+    const mobileNavToggle = document.getElementById('mobile-nav-toggle');
+    const mobileNavOverlay = document.getElementById('mobile-nav-overlay');
+
+    function openMobileNav() {
+        sidebar.classList.add('mobile-open');
+        mobileNavOverlay.classList.add('active');
+        if (mobileNavToggle) mobileNavToggle.textContent = '✕';
+        document.body.style.overflow = 'hidden'; // Prevent background scroll
+    }
+
+    function closeMobileNav() {
+        sidebar.classList.remove('mobile-open');
+        mobileNavOverlay.classList.remove('active');
+        if (mobileNavToggle) mobileNavToggle.textContent = '☰';
+        document.body.style.overflow = '';
+    }
+
+    if (mobileNavToggle) {
+        mobileNavToggle.addEventListener('click', () => {
+            if (sidebar.classList.contains('mobile-open')) {
+                closeMobileNav();
+            } else {
+                openMobileNav();
+            }
+        });
+    }
+
+    if (mobileNavOverlay) {
+        mobileNavOverlay.addEventListener('click', closeMobileNav);
+    }
+
+    // Close mobile nav on window resize to desktop
+    window.addEventListener('resize', () => {
+        if (window.innerWidth > 768) {
+            closeMobileNav();
+            document.body.style.overflow = '';
+        }
+    });
 
     // Device detection utility
     function isMobileDevice() {
@@ -92,6 +137,7 @@ function initApp() {
         link.addEventListener('click', () => {
             const view = link.dataset.view;
             console.log('Sidebar clicked:', view);
+            closeMobileNav(); // Always close mobile drawer on nav
             if (view === 'dashboard') {
                 switchView('dashboard');
             } else {
@@ -669,6 +715,12 @@ function initApp() {
     function initSnakeLogic() {
         const canvas = document.getElementById('snake-canvas'), ctx = canvas.getContext('2d');
         const scoreEl = document.getElementById('snake-score'), highEl = document.getElementById('snake-highscore'), startBtn = document.getElementById('snake-start');
+
+        // Match canvas internal resolution to its CSS display size (mobile-aware)
+        const displaySize = Math.min(canvas.offsetWidth || 400, 400);
+        canvas.width = displaySize;
+        canvas.height = displaySize;
+
         const gridSize = 20, tileCount = canvas.width / gridSize;
         let score = 0, highscore = localStorage.getItem('snake-highscore') || 0, snake = [{ x: 10, y: 10 }], food = { x: 5, y: 5 }, dx = 0, dy = 0, loop = null, paused = true;
         highEl.innerText = highscore;
@@ -694,7 +746,7 @@ function initApp() {
                 return;
             }
             // Food
-            ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.arc(food.x * gridSize + 10, food.y * gridSize + 10, 7, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.arc(food.x * gridSize + gridSize/2, food.y * gridSize + gridSize/2, gridSize/3, 0, Math.PI * 2); ctx.fill();
             // Snake
             snake.forEach((p, i) => {
                 ctx.fillStyle = `rgba(16, 185, 129, ${1 - i / snake.length * 0.5})`;
@@ -925,7 +977,13 @@ function initApp() {
             statusEl.innerText = '';
             minesLeftEl.innerText = mineCount;
 
-            gridEl.style.gridTemplateColumns = `repeat(${cols}, 32px)`;
+            // Dynamically compute cell size based on available width
+            const availWidth = Math.min(window.innerWidth - 60, 600);
+            const cellSize = Math.max(20, Math.min(32, Math.floor(availWidth / cols)));
+
+            gridEl.style.gridTemplateColumns = `repeat(${cols}, ${cellSize}px)`;
+            // Apply dynamic cell sizing via inline styles on each cell
+            const cellStyleStr = `width:${cellSize}px;height:${cellSize}px;font-size:${Math.max(0.65, cellSize / 38)}rem;`;
             gridEl.innerHTML = '';
 
             // Generate grid
@@ -937,6 +995,7 @@ function initApp() {
                         el: document.createElement('div')
                     };
                     cell.el.classList.add('mines-cell');
+                    cell.el.style.cssText = cellStyleStr;
                     cell.el.addEventListener('click', () => reveal(r, c));
                     cell.el.addEventListener('contextmenu', (e) => {
                         e.preventDefault();
