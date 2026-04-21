@@ -207,16 +207,17 @@ function initApp() {
     }
 
     function launchGame(gameId) {
-        toggleSidebar(true); // Auto-collapse when game starts
+        toggleSidebar(true);
         const preloader = document.getElementById('game-preloader');
         if (!preloader) {
-            // Fallback if preloader missing
             performLaunch(gameId);
             return;
         }
 
         const preloaderText = preloader.querySelector('.preloader-text');
-        const spinner = preloader.querySelector('.preloader-spinner');
+        const statusText = preloader.querySelector('.preloader-status');
+        const progressBar = preloader.querySelector('.preloader-progress-bar');
+        const backdrop = preloader.querySelector('.preloader-backdrop');
 
         const gameColors = {
             'tic-tac-toe': '#6366f1',
@@ -231,26 +232,63 @@ function initApp() {
             'the-flame': '#FF416C'
         };
 
+        const statusMessages = [
+            "Optimizing Game Engine...",
+            "Loading High-Resolution Assets...",
+            "Calibrating Neural Pathways...",
+            "Decrypting Secret Levels...",
+            "Syncing with Global Hub...",
+            "Checking for Player Skill (None Found)...",
+            "Initializing Quantum Logic...",
+            "Preparing the Arena..."
+        ];
+
         const color = gameColors[gameId] || '#6366f1';
-        preloader.style.background = `radial-gradient(circle at center, ${color}AA 0%, #0f172a 100%)`;
-        preloader.style.backgroundColor = '#0f172a'; // Solid base
-        if (spinner) spinner.style.borderLeftColor = color;
-        if (preloaderText) {
-            preloaderText.style.background = `linear-gradient(to right, #fff, ${color})`;
-            preloaderText.style.webkitBackgroundClip = 'text';
-            preloaderText.innerText = `Entering ${gameId.replace(/-/g, ' ')}...`;
+        
+        // Update Backdrop
+        if (backdrop) {
+            backdrop.style.background = `radial-gradient(circle at center, ${color} 0%, transparent 70%)`;
         }
+
+        // Update Text
+        if (preloaderText) {
+            preloaderText.innerText = gameId.replace(/-/g, ' ');
+            preloaderText.style.backgroundImage = `linear-gradient(to right, #fff, ${color}, #fff)`;
+        }
+
+        // Reset progress
+        if (progressBar) progressBar.style.width = '0%';
+        if (statusText) statusText.innerText = "Connecting...";
 
         preloader.classList.add('active');
         preloader.style.opacity = '1';
 
-        setTimeout(() => {
-            performLaunch(gameId);
-            setTimeout(() => {
-                preloader.style.opacity = '0';
-                setTimeout(() => preloader.classList.remove('active'), 500);
-            }, 600);
-        }, 800);
+        // Animate progress
+        let progress = 0;
+        const progressInterval = setInterval(() => {
+            progress += Math.random() * 15;
+            if (progress > 100) progress = 100;
+            if (progressBar) progressBar.style.width = `${progress}%`;
+            
+            if (progress > 30 && progress < 40 && statusText) statusText.innerText = statusMessages[Math.floor(Math.random() * statusMessages.length)];
+            if (progress > 60 && progress < 70 && statusText) statusText.innerText = statusMessages[Math.floor(Math.random() * statusMessages.length)];
+            
+            if (progress >= 100) {
+                clearInterval(progressInterval);
+                if (statusText) statusText.innerText = "Ready to Play.";
+                
+                setTimeout(() => {
+                    performLaunch(gameId);
+                    setTimeout(() => {
+                        preloader.style.opacity = '0';
+                        setTimeout(() => {
+                            preloader.classList.remove('active');
+                            if (progressBar) progressBar.style.width = '0%';
+                        }, 800);
+                    }, 400);
+                }, 200);
+            }
+        }, 100);
     }
 
     function performLaunch(gameId) {
@@ -3047,10 +3085,13 @@ function initApp() {
                 </div>
 
                 <div id="flame-loading" class="flame-loading-overlay">
-                    <div class="flame-fire-container">
-                        <div class="fire-eye"></div>
+                    <div class="flame-loader-visual">
+                        <div class="flame-ring ring-1"></div>
+                        <div class="flame-ring ring-2"></div>
+                        <div class="flame-core"></div>
                     </div>
                     <div class="flame-loading-text">SOLVING FATE...</div>
+                    <div class="flame-loading-status">Analyzing Soul Fragments...</div>
                 </div>
 
                 <div id="flame-result" class="flame-result-screen">
@@ -3166,7 +3207,24 @@ function initApp() {
             loading.classList.add('active');
 
             // Aesthetic Delay
+            const statusMessages = [
+                "Analyzing Soul Fragments...",
+                "Decoding Cosmic Resonance...",
+                "Consulting the Ancient Scripts...",
+                "Measuring Heartbeat Variance...",
+                "Syncing Destinies...",
+                "Finalizing Fate Calculation..."
+            ];
+            
+            const statusText = loading.querySelector('.flame-loading-status');
+            let statusIdx = 0;
+            const statusInterval = setInterval(() => {
+                if (statusText) statusText.innerText = statusMessages[statusIdx % statusMessages.length];
+                statusIdx++;
+            }, 600);
+
             setTimeout(() => {
+                clearInterval(statusInterval);
                 const resultLetter = calculateflames(val1, val2);
                 const info = flamesMap[resultLetter];
 
