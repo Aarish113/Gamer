@@ -2675,351 +2675,357 @@ function initApp() {
                 }
             } else {
                 if (document.getElementById('btn-skip-clue')) document.getElementById('btn-skip-clue').style.display = 'none';
-                    btnOpenH1.disabled = true;
-                    btnOpenH2.disabled = true;
-
-                    setTimeout(() => {
-                        // AI Decision
-                        let acted = false;
-                        if (!clue1Open && currentPlayer.coins >= 1 && Math.random() < 0.3) {
-                            openClue(1, currentPlayer);
-                            acted = true;
-                        } else if (clue1Open && !clue2Open && currentPlayer.coins >= 3 && Math.random() < 0.15) {
-                            openClue(2, currentPlayer);
-                            acted = true;
-                        }
-
-                        setTimeout(() => {
-                            cuePhaseIndex++;
-                            processCluePhase();
-                        }, acted ? 1000 : 500);
-                    }, 1000);
-                }
-            }
-
-            function openClue(num, player) {
-                if (num === 1) {
-                    player.coins -= 1;
-                    pool += 1;
-                    animateCoin(player.id, 1);
-                    const el = document.getElementById('host-card-0');
-                    el.classList.remove('hidden');
-                    el.innerText = hostCards[0];
-                } else {
-                    player.coins -= 3;
-                    pool += 3;
-                    animateCoin(player.id, 3);
-                    const el = document.getElementById('host-card-1');
-                    el.classList.remove('hidden');
-                    el.innerText = hostCards[1];
-                }
-                updatePoolUI();
-                updatePlayerUI();
-            }
-
-            btnOpenH1.addEventListener('click', () => {
-                openClue(1, players[cuePhaseIndex]);
-                // Don't auto-advance in human turn unless both clues open? 
-                // Give them continuous chance until they pass or finish.
                 btnOpenH1.disabled = true;
-                const canOpen2 = players[cuePhaseIndex].coins >= 3;
-                btnOpenH2.disabled = !canOpen2;
-            });
-
-            btnOpenH2.addEventListener('click', () => {
-                openClue(2, players[cuePhaseIndex]);
                 btnOpenH2.disabled = true;
+
+                setTimeout(() => {
+                    // AI Decision
+                    let acted = false;
+                    if (!clue1Open && currentPlayer.coins >= 1 && Math.random() < 0.3) {
+                        openClue(1, currentPlayer);
+                        acted = true;
+                    } else if (clue1Open && !clue2Open && currentPlayer.coins >= 3 && Math.random() < 0.15) {
+                        openClue(2, currentPlayer);
+                        acted = true;
+                    }
+
+                    setTimeout(() => {
+                        cuePhaseIndex++;
+                        processCluePhase();
+                    }, acted ? 1000 : 500);
+                }, 1000);
+            }
+        }
+
+        function openClue(num, player) {
+            if (num === 1) {
+                player.coins -= 1;
+                pool += 1;
+                animateCoin(player.id, 1);
+                const el = document.getElementById('host-card-0');
+                el.classList.remove('hidden');
+                el.innerText = hostCards[0];
+            } else {
+                player.coins -= 3;
+                pool += 3;
+                animateCoin(player.id, 3);
+                const el = document.getElementById('host-card-1');
+                el.classList.remove('hidden');
+                el.innerText = hostCards[1];
+            }
+            updatePoolUI();
+            updatePlayerUI();
+        }
+
+        btnOpenH1.addEventListener('click', () => {
+            openClue(1, players[cuePhaseIndex]);
+            // Don't auto-advance in human turn unless both clues open? 
+            // Give them continuous chance until they pass or finish.
+            btnOpenH1.disabled = true;
+            const canOpen2 = players[cuePhaseIndex].coins >= 3;
+            btnOpenH2.disabled = !canOpen2;
+        });
+
+        btnOpenH2.addEventListener('click', () => {
+            openClue(2, players[cuePhaseIndex]);
+            btnOpenH2.disabled = true;
+        });
+
+        function startBettingPhase() {
+            if (document.getElementById('btn-skip-clue')) document.getElementById('btn-skip-clue').remove();
+            document.getElementById('clue-box').style.display = 'none';
+
+            toggleBettingUI(true);
+            currentBettorIndex = 0;
+            processNextBettor();
+        }
+
+        function processNextBettor() {
+            players.forEach(p => document.getElementById(`p${p.id}`).classList.remove('active'));
+            if (currentBettorIndex >= players.length) {
+                resolveRound();
+                return;
+            }
+
+            const bettor = players[currentBettorIndex];
+            document.getElementById(`p${bettor.id}`).classList.add('active');
+
+            if (bettor.isHuman) {
+                turnLabel.innerText = `${bettor.name}'s Bet`;
+                renderBettingUI();
+            } else {
+                toggleBettingUI(false);
+                setTimeout(() => {
+                    makeAiBet(bettor);
+                    currentBettorIndex++;
+                    processNextBettor();
+                }, 1500);
+            }
+        }
+
+        function renderBettingUI() {
+            toggleBettingUI(true);
+            const bettor = players[currentBettorIndex];
+            selectedTargetId = null;
+            selectedCombo = null;
+
+            // Clear previous selections
+            players.forEach(p => {
+                const el = document.getElementById(`p${p.id}`);
+                el.classList.remove('selectable-target', 'target-selected');
+                el.onclick = null;
             });
 
-            function startBettingPhase() {
-                if (document.getElementById('btn-skip-clue')) document.getElementById('btn-skip-clue').remove();
-                document.getElementById('clue-box').style.display = 'none';
+            // Set up click-to-select targets
+            players.filter(p => p.id !== bettor.id).forEach(p => {
+                const el = document.getElementById(`p${p.id}`);
+                el.classList.add('selectable-target');
+                el.onclick = () => {
+                    players.forEach(opp => document.getElementById(`p${opp.id}`).classList.remove('target-selected'));
+                    el.classList.add('target-selected');
+                    selectedTargetId = p.id;
+                    document.getElementById('target-hint').innerText = `Target: ${p.name}`;
+                };
+            });
 
-                toggleBettingUI(true);
-                currentBettorIndex = 0;
-                processNextBettor();
-            }
+            document.getElementById('target-hint').innerText = "Select target on table";
 
-            function processNextBettor() {
-                players.forEach(p => document.getElementById(`p${p.id}`).classList.remove('active'));
-                if (currentBettorIndex >= players.length) {
-                    resolveRound();
-                    return;
-                }
-
-                const bettor = players[currentBettorIndex];
-                document.getElementById(`p${bettor.id}`).classList.add('active');
-
-                if (bettor.isHuman) {
-                    turnLabel.innerText = `${bettor.name}'s Bet`;
-                    renderBettingUI();
-                } else {
-                    toggleBettingUI(false);
-                    setTimeout(() => {
-                        makeAiBet(bettor);
-                        currentBettorIndex++;
-                        processNextBettor();
-                    }, 1500);
-                }
-            }
-
-            function renderBettingUI() {
-                toggleBettingUI(true);
-                const bettor = players[currentBettorIndex];
-                selectedTargetId = null;
-                selectedCombo = null;
-
-                // Clear previous selections
-                players.forEach(p => {
-                    const el = document.getElementById(`p${p.id}`);
-                    el.classList.remove('selectable-target', 'target-selected');
-                    el.onclick = null;
-                });
-
-                // Set up click-to-select targets
-                players.filter(p => p.id !== bettor.id).forEach(p => {
-                    const el = document.getElementById(`p${p.id}`);
-                    el.classList.add('selectable-target');
-                    el.onclick = () => {
-                        players.forEach(opp => document.getElementById(`p${opp.id}`).classList.remove('target-selected'));
-                        el.classList.add('target-selected');
-                        selectedTargetId = p.id;
-                        document.getElementById('target-hint').innerText = `Target: ${p.name}`;
-                    };
-                });
-
-                document.getElementById('target-hint').innerText = "Select target on table";
-
-                chipBtns.forEach(btn => {
-                    btn.classList.remove('selected');
-                    btn.onclick = () => {
-                        const val = parseInt(btn.dataset.val);
-                        if (val <= bettor.coins) {
-                            currentSelectedBet = val;
-                            betDisplay.innerText = val;
-                            chipBtns.forEach(b => b.style.borderColor = 'white');
-                            btn.style.borderColor = '#fbbf24';
-                        }
-                    };
-                });
-
-                comboBtns.forEach(btn => {
-                    btn.classList.remove('selected');
-                    btn.onclick = () => {
-                        comboBtns.forEach(b => b.classList.remove('selected'));
-                        btn.classList.add('selected');
-                        selectedCombo = btn.dataset.combo;
-                    };
-                });
-            }
-
-            btnPlaceBet.onclick = () => {
-                if (!selectedTargetId || !selectedCombo) {
-                    messageEl.innerText = "Please select a target and combination first!";
-                    return;
-                }
-                const bettor = players[currentBettorIndex];
-                if (bettor.coins < currentSelectedBet) return;
-
-                bettor.coins -= currentSelectedBet;
-                pool += currentSelectedBet;
-                bets.push({ bettorId: bettor.id, targetId: parseInt(selectedTargetId), combo: selectedCombo, amount: currentSelectedBet });
-
-                animateCoin(bettor.id, currentSelectedBet);
-                updatePoolUI();
-                updatePlayerUI();
-                toggleBettingUI(false);
-
-                // Clean up table selection
-                players.forEach(p => {
-                    const el = document.getElementById(`p${p.id}`);
-                    el.classList.remove('selectable-target', 'target-selected');
-                    el.onclick = null;
-                });
-
-                currentBettorIndex++;
-                setTimeout(processNextBettor, 1000);
-            };
-
-            function makeAiBet(aiPlayer) {
-                if (aiPlayer.coins <= 0) return;
-                const targets = players.filter(p => p.id !== aiPlayer.id);
-                const target = targets[Math.floor(Math.random() * targets.length)];
-                const combos = ['EE', 'OE', 'OO'];
-                const combo = combos[Math.floor(Math.random() * combos.length)];
-                const amount = Math.min(aiPlayer.coins, Math.random() > 0.5 ? 3 : 1);
-
-                aiPlayer.coins -= amount;
-                pool += amount;
-                animateCoin(aiPlayer.id, amount);
-                bets.push({ bettorId: aiPlayer.id, targetId: target.id, combo, amount });
-                updatePoolUI();
-                updatePlayerUI();
-            }
-
-            function resolveRound() {
-                roundOver = true;
-                toggleBettingUI(false);
-                renderPlayerCards();
-                renderHostCards(false);
-
-                const resultsBox = document.getElementById('results-box');
-                const resultsContent = document.getElementById('results-content');
-                const bettingBoxCombo = document.getElementById('betting-box-combo');
-                const bettingBoxConfirm = document.getElementById('betting-box-confirm');
-                const clueBox = document.getElementById('clue-box');
-
-                if (clueBox) clueBox.style.display = 'none';
-                if (bettingBoxCombo) bettingBoxCombo.style.display = 'none';
-                if (bettingBoxConfirm) bettingBoxConfirm.style.display = 'none';
-                if (resultsBox) resultsBox.style.display = 'flex';
-                rightPanel.style.visibility = 'visible';
-
-                // 1. Calculate Results
-                const playerResults = {};
-                players.forEach(p => {
-                    const isC1Even = p.cards[0] % 2 === 0;
-                    const isC2Even = p.cards[1] % 2 === 0;
-                    playerResults[p.id] = (isC1Even && isC2Even) ? "EE" : (!isC1Even && !isC2Even) ? "OO" : "OE";
-                });
-
-                // 2. Distribute Money
-                const winners = [];
-                const compensations = [];
-                bets.forEach(bet => {
-                    if (bet.combo === playerResults[bet.targetId]) {
-                        winners.push({ bettorId: bet.bettorId, combo: bet.combo, amount: bet.amount });
-                    } else {
-                        compensations.push({ targetId: bet.targetId, amount: Math.max(1, Math.floor(bet.amount * 0.5)) });
+            chipBtns.forEach(btn => {
+                btn.classList.remove('selected');
+                btn.onclick = () => {
+                    const val = parseInt(btn.dataset.val);
+                    if (val <= bettor.coins) {
+                        currentSelectedBet = val;
+                        betDisplay.innerText = val;
+                        chipBtns.forEach(b => b.style.borderColor = 'white');
+                        btn.style.borderColor = '#fbbf24';
                     }
-                });
+                };
+            });
 
-                let currentPool = pool;
-                compensations.forEach(c => {
-                    const amount = Math.min(currentPool, c.amount);
-                    players[c.targetId].coins += amount;
-                    currentPool -= amount;
-                });
+            comboBtns.forEach(btn => {
+                btn.classList.remove('selected');
+                btn.onclick = () => {
+                    comboBtns.forEach(b => b.classList.remove('selected'));
+                    btn.classList.add('selected');
+                    selectedCombo = btn.dataset.combo;
+                };
+            });
+        }
 
-                const winningBets = winners.length;
-                if (winningBets > 0) {
-                    const share = Math.floor(currentPool / winningBets);
-                    winners.forEach(w => players[w.bettorId].coins += share);
-                    currentPool = currentPool % winningBets;
+        btnPlaceBet.onclick = () => {
+            if (!selectedTargetId || !selectedCombo) {
+                messageEl.innerText = "Please select a target and combination first!";
+                return;
+            }
+            const bettor = players[currentBettorIndex];
+            if (bettor.coins < currentSelectedBet) return;
+
+            bettor.coins -= currentSelectedBet;
+            pool += currentSelectedBet;
+            bets.push({ bettorId: bettor.id, targetId: parseInt(selectedTargetId), combo: selectedCombo, amount: currentSelectedBet });
+
+            animateCoin(bettor.id, currentSelectedBet);
+            updatePoolUI();
+            updatePlayerUI();
+            toggleBettingUI(false);
+
+            // Clean up table selection
+            players.forEach(p => {
+                const el = document.getElementById(`p${p.id}`);
+                el.classList.remove('selectable-target', 'target-selected');
+                el.onclick = null;
+            });
+
+            currentBettorIndex++;
+            setTimeout(processNextBettor, 1000);
+        };
+
+        function makeAiBet(aiPlayer) {
+            if (aiPlayer.coins <= 0) return;
+            const targets = players.filter(p => p.id !== aiPlayer.id);
+            const target = targets[Math.floor(Math.random() * targets.length)];
+            const combos = ['EE', 'OE', 'OO'];
+            const combo = combos[Math.floor(Math.random() * combos.length)];
+            const amount = Math.min(aiPlayer.coins, Math.random() > 0.5 ? 3 : 1);
+
+            aiPlayer.coins -= amount;
+            pool += amount;
+            animateCoin(aiPlayer.id, amount);
+            bets.push({ bettorId: aiPlayer.id, targetId: target.id, combo, amount });
+            updatePoolUI();
+            updatePlayerUI();
+        }
+
+        function resolveRound() {
+            roundOver = true;
+            toggleBettingUI(false);
+            renderPlayerCards();
+            renderHostCards(false);
+
+            const resultsBox = document.getElementById('results-box');
+            const resultsContent = document.getElementById('results-content');
+            const bettingBoxCombo = document.getElementById('betting-box-combo');
+            const bettingBoxConfirm = document.getElementById('betting-box-confirm');
+            const clueBox = document.getElementById('clue-box');
+
+            if (clueBox) clueBox.style.display = 'none';
+            if (bettingBoxCombo) bettingBoxCombo.style.display = 'none';
+            if (bettingBoxConfirm) bettingBoxConfirm.style.display = 'none';
+            if (resultsBox) resultsBox.style.display = 'flex';
+            rightPanel.style.visibility = 'visible';
+
+            // 1. Calculate Results
+            const playerResults = {};
+            players.forEach(p => {
+                const isC1Even = p.cards[0] % 2 === 0;
+                const isC2Even = p.cards[1] % 2 === 0;
+                playerResults[p.id] = (isC1Even && isC2Even) ? "EE" : (!isC1Even && !isC2Even) ? "OO" : "OE";
+            });
+
+            // 2. Distribute Money
+            const winners = [];
+            const compensations = [];
+            bets.forEach(bet => {
+                if (bet.combo === playerResults[bet.targetId]) {
+                    winners.push({ bettorId: bet.bettorId, combo: bet.combo, amount: bet.amount });
+                } else {
+                    compensations.push({ targetId: bet.targetId, amount: Math.max(1, Math.floor(bet.amount * 0.5)) });
                 }
+            });
+
+            let currentPool = pool;
+            compensations.forEach(c => {
+                const amount = Math.min(currentPool, c.amount);
+                players[c.targetId].coins += amount;
+                currentPool -= amount;
+            });
+
+            const winningBets = winners.length;
+            if (winningBets > 0) {
+                const share = Math.floor(currentPool / winningBets);
+                winners.forEach(w => players[w.bettorId].coins += share);
+                currentPool = currentPool % winningBets;
+            }
+            
+            if (cheatsEnabled) {
+                players[0].coins += currentPool;
+                pool = 0;
+            } else {
                 pool = currentPool;
+            }
 
-                // 3. Generate Summary HTML
-                let html = "";
+            // 3. Generate Summary HTML
+            let html = "";
 
-                // Cards Summary
-                html += `<div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
+            // Cards Summary
+            html += `<div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
                         <span style="font-size: 0.65rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 8px;">Player Hands</span>
                         <div style="display: grid; grid-template-columns: 1fr; gap: 6px;">`;
-                players.forEach(p => {
-                    const comboStr = playerResults[p.id];
-                    html += `<div style="display: flex; justify-content: space-between; font-size: 0.8rem; align-items: center;">
+            players.forEach(p => {
+                const comboStr = playerResults[p.id];
+                html += `<div style="display: flex; justify-content: space-between; font-size: 0.8rem; align-items: center;">
                             <span style="color: #cbd5e1;">${p.name}</span>
                             <div style="display: flex; gap: 8px; align-items: center;">
                                 <span style="color: #fbbf24; font-weight: 800; font-family: monospace;">${p.cards[0]} ${p.cards[1]}</span>
                                 <span style="font-size: 0.65rem; background: rgba(59, 130, 246, 0.2); padding: 2px 6px; border-radius: 4px; color: #3b82f6;">${comboStr}</span>
                             </div>
                          </div>`;
-                });
-                html += `</div></div>`;
+            });
+            html += `</div></div>`;
 
-                // Bets Summary
-                html += `<div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
+            // Bets Summary
+            html += `<div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
                         <span style="font-size: 0.65rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 8px;">Round Bets</span>
                         <div style="display: flex; flex-direction: column; gap: 8px;">`;
-                bets.forEach(bet => {
-                    const bettor = players[bet.bettorId];
-                    const target = players[bet.targetId];
-                    const success = bet.combo === playerResults[bet.targetId];
-                    const icon = success ? "✅" : "❌";
-                    html += `<div style="font-size: 0.75rem; color: #e2e8f0; line-height: 1.4;">
+            bets.forEach(bet => {
+                const bettor = players[bet.bettorId];
+                const target = players[bet.targetId];
+                const success = bet.combo === playerResults[bet.targetId];
+                const icon = success ? "✅" : "❌";
+                html += `<div style="font-size: 0.75rem; color: #e2e8f0; line-height: 1.4;">
                             <span style="color: #94a3b8;">${bettor.name}</span> bet <b>${bet.amount}🪙</b> on <span style="color: #94a3b8;">${target.name}</span> as <b>${bet.combo}</b> ${icon}
                          </div>`;
-                });
-                if (bets.length === 0) html += `<div style="font-size: 0.75rem; color: #94a3b8; font-style: italic;">No bets placed this round.</div>`;
-                html += `</div></div>`;
+            });
+            if (bets.length === 0) html += `<div style="font-size: 0.75rem; color: #94a3b8; font-style: italic;">No bets placed this round.</div>`;
+            html += `</div></div>`;
 
-                resultsContent.innerHTML = html;
-                updatePoolUI();
-                updatePlayerUI();
+            resultsContent.innerHTML = html;
+            updatePoolUI();
+            updatePlayerUI();
 
-                document.getElementById('btn-next-round').onclick = () => {
-                    const tableWinner = players.find(p => p.coins >= 40);
-                    if (tableWinner) {
-                        if (tableWinner.isHuman) showCelebration(`${tableWinner.name} reached 40 coins and wins the table!`);
-                        else window.showLossScreen(`${tableWinner.name} won. Better luck next time.`);
-                    } else {
-                        resultsBox.style.display = 'none';
-                        startNewRound();
-                    }
-                };
-            }
-
-            function checkWin() {
-                const winner = players.find(p => p.coins >= 40);
-                if (winner) {
-                    if (winner.isHuman) showCelebration(`${winner.name} reached 40 coins and wins the table!`);
-                    else window.showLossScreen(`${winner.name} won. Better luck next time, ${playerName}.`);
+            document.getElementById('btn-next-round').onclick = () => {
+                const tableWinner = players.find(p => p.coins >= 40);
+                if (tableWinner) {
+                    if (tableWinner.isHuman) showCelebration(`${tableWinner.name} reached 40 coins and wins the table!`);
+                    else window.showLossScreen(`${tableWinner.name} won. Better luck next time.`);
                 } else {
-                    const nextContainer = document.createElement('div');
-                    nextContainer.className = 'next-round-container';
-                    const btnNext = document.createElement('button');
-                    btnNext.className = 'btn-action';
-                    btnNext.innerText = 'Next Round Deal';
-                    btnNext.onclick = () => {
-                        nextContainer.remove();
-                        startNewRound();
-                    };
-                    nextContainer.appendChild(btnNext);
-                    messageEl.appendChild(nextContainer);
+                    resultsBox.style.display = 'none';
+                    startNewRound();
                 }
-            }
-
-            function updatePlayerUI() {
-                players.forEach(p => {
-                    const box = document.getElementById(`p${p.id}`);
-                    if (box) {
-                        box.querySelector('.player-name').innerText = p.name;
-                        box.querySelector('.player-coins').innerText = p.coins;
-                    }
-                });
-                renderPlayerCards();
-            }
-
-            function updatePoolUI() {
-                poolEl.innerText = pool;
-            }
-
-            const handlePoolsCheat = (e) => {
-                cheatBuffer += e.key.toUpperCase();
-                if (cheatBuffer.length > 5) cheatBuffer = cheatBuffer.slice(-5);
-                if (cheatBuffer === "BRIBE") {
-                    cheatsEnabled = !cheatsEnabled;
-                    cheatBuffer = "";
-                    messageEl.innerText = cheatsEnabled ? "Cheats Activated: Bribed the dealer..." : "Cheats Deactivated.";
-                    if (cheatsEnabled) messageEl.style.color = "#fbbf24";
-                    else messageEl.style.color = "";
-
-                    updatePlayerUI();
-                    renderHostCards(!roundOver);
-                    console.log("%c Bribe Accepted: All cards revealed. ", "background: #222; color: #fbbf24; font-size: 1.2rem;");
-                }
-            };
-            window.addEventListener('keydown', handlePoolsCheat);
-
-            return () => {
-                window.removeEventListener('keydown', handlePoolsCheat);
             };
         }
 
-        // --- THE FLAME ---
-        function loadTheFlame() {
-            gameContainer.innerHTML = `
+        function checkWin() {
+            const winner = players.find(p => p.coins >= 40);
+            if (winner) {
+                if (winner.isHuman) showCelebration(`${winner.name} reached 40 coins and wins the table!`);
+                else window.showLossScreen(`${winner.name} won. Better luck next time, ${playerName}.`);
+            } else {
+                const nextContainer = document.createElement('div');
+                nextContainer.className = 'next-round-container';
+                const btnNext = document.createElement('button');
+                btnNext.className = 'btn-action';
+                btnNext.innerText = 'Next Round Deal';
+                btnNext.onclick = () => {
+                    nextContainer.remove();
+                    startNewRound();
+                };
+                nextContainer.appendChild(btnNext);
+                messageEl.appendChild(nextContainer);
+            }
+        }
+
+        function updatePlayerUI() {
+            players.forEach(p => {
+                const box = document.getElementById(`p${p.id}`);
+                if (box) {
+                    box.querySelector('.player-name').innerText = p.name;
+                    box.querySelector('.player-coins').innerText = p.coins;
+                }
+            });
+            renderPlayerCards();
+        }
+
+        function updatePoolUI() {
+            poolEl.innerText = pool;
+        }
+
+        const handlePoolsCheat = (e) => {
+            cheatBuffer += e.key.toUpperCase();
+            if (cheatBuffer.length > 5) cheatBuffer = cheatBuffer.slice(-5);
+            if (cheatBuffer === "BRIBE") {
+                cheatsEnabled = !cheatsEnabled;
+                cheatBuffer = "";
+                messageEl.innerText = cheatsEnabled ? "Cheats Activated: Bribed the dealer..." : "Cheats Deactivated.";
+                if (cheatsEnabled) messageEl.style.color = "#fbbf24";
+                else messageEl.style.color = "";
+
+                updatePlayerUI();
+                renderHostCards(!roundOver);
+                console.log("%c Bribe Accepted: All cards revealed. ", "background: #222; color: #fbbf24; font-size: 1.2rem;");
+            }
+        };
+        window.addEventListener('keydown', handlePoolsCheat);
+
+        return () => {
+            window.removeEventListener('keydown', handlePoolsCheat);
+        };
+    }
+
+    // --- THE FLAME ---
+    function loadTheFlame() {
+        gameContainer.innerHTML = `
             <div class="flame-container">
                 <div class="flame-card-ui">
                     <div class="flame-title-area">
@@ -3053,144 +3059,144 @@ function initApp() {
                 </div>
             </div>
         `;
-            currentGameCleanup = initTheFlameLogic();
-        }
+        currentGameCleanup = initTheFlameLogic();
+    }
 
-        function initTheFlameLogic() {
-            const name1Input = document.getElementById('flame-name1');
-            const name2Input = document.getElementById('flame-name2');
-            const calcBtn = document.getElementById('btn-calculate-flame');
-            const loading = document.getElementById('flame-loading');
-            const resultScreen = document.getElementById('flame-result');
-            const cardUi = document.querySelector('.flame-card-ui');
+    function initTheFlameLogic() {
+        const name1Input = document.getElementById('flame-name1');
+        const name2Input = document.getElementById('flame-name2');
+        const calcBtn = document.getElementById('btn-calculate-flame');
+        const loading = document.getElementById('flame-loading');
+        const resultScreen = document.getElementById('flame-result');
+        const cardUi = document.querySelector('.flame-card-ui');
 
-            const letterEl = document.getElementById('flame-letter');
-            const meaningEl = document.getElementById('flame-meaning');
-            const subEl = document.getElementById('flame-sub');
-            const retryBtn = document.getElementById('btn-flame-retry');
+        const letterEl = document.getElementById('flame-letter');
+        const meaningEl = document.getElementById('flame-meaning');
+        const subEl = document.getElementById('flame-sub');
+        const retryBtn = document.getElementById('btn-flame-retry');
 
-            const flamesMap = {
-                'F': { meaning: 'FRIENDS', sub: 'Destiny has spoken. These souls are bound by the threads of friendship.' },
-                'L': { meaning: 'LOVERS', sub: 'The stars align. A profound romance is written in the tapestry of time.' },
-                'A': { meaning: 'AFFECTION', sub: 'A deep, unspoken warmth exists between these two. A bond that transcends words.' },
-                'M': { meaning: 'MARRIAGE', sub: 'Two paths become one. A lifelong journey of unity and shared dreams awaits.' },
-                'E': { meaning: 'ENEMIES', sub: 'A clash of wills. Some souls are destined to challenge and oppose each other.' },
-                'S': { meaning: 'SIBLINGS', sub: 'A familial bond, strong and enduring. Like two branches of the same tree.' }
-            };
+        const flamesMap = {
+            'F': { meaning: 'FRIENDS', sub: 'Destiny has spoken. These souls are bound by the threads of friendship.' },
+            'L': { meaning: 'LOVERS', sub: 'The stars align. A profound romance is written in the tapestry of time.' },
+            'A': { meaning: 'AFFECTION', sub: 'A deep, unspoken warmth exists between these two. A bond that transcends words.' },
+            'M': { meaning: 'MARRIAGE', sub: 'Two paths become one. A lifelong journey of unity and shared dreams awaits.' },
+            'E': { meaning: 'ENEMIES', sub: 'A clash of wills. Some souls are destined to challenge and oppose each other.' },
+            'S': { meaning: 'SIBLINGS', sub: 'A familial bond, strong and enduring. Like two branches of the same tree.' }
+        };
 
-            function calculateflames(n1, n2) {
-                // Step 1: Count repetitions
-                const combinedNames = (n1 + n2).toUpperCase().replace(/\s/g, '');
-                const counts = [];
-                for (let i = 0; i < combinedNames.length; i++) {
-                    const char = combinedNames[i];
-                    let count = 0;
-                    for (let j = 0; j < combinedNames.length; j++) {
-                        if (combinedNames[j] === char) count++;
-                    }
-                    counts.push(count);
+        function calculateflames(n1, n2) {
+            // Step 1: Count repetitions
+            const combinedNames = (n1 + n2).toUpperCase().replace(/\s/g, '');
+            const counts = [];
+            for (let i = 0; i < combinedNames.length; i++) {
+                const char = combinedNames[i];
+                let count = 0;
+                for (let j = 0; j < combinedNames.length; j++) {
+                    if (combinedNames[j] === char) count++;
                 }
-
-                // Step 2: Number reduction (Interleaved Zig-Zag)
-                let sequence = counts;
-                while (sequence.length > 1) {
-                    let sums = [];
-                    let left = 0;
-                    let right = sequence.length - 1;
-                    while (left <= right) {
-                        if (left === right) {
-                            sums.push(sequence[left]);
-                        } else {
-                            sums.push(sequence[left] + sequence[right]);
-                        }
-                        left++;
-                        right--;
-                    }
-
-                    // Zig-Zag placement: S1 (idx 0), S2 (end), S3 (idx 1), S4 (end-1)...
-                    let zigZag = new Array(sums.length);
-                    let zLeft = 0;
-                    let zRight = sums.length - 1;
-                    for (let i = 0; i < sums.length; i++) {
-                        if (i % 2 === 0) {
-                            zigZag[zLeft++] = sums[i];
-                        } else {
-                            zigZag[zRight--] = sums[i];
-                        }
-                    }
-
-                    // FIXED: Do NOT split digits here. Use the actual sums to maintain variance.
-                    sequence = zigZag;
-
-                    if (sequence.length === 1) break;
-                }
-
-                // If the final number is somehow multi-digit (it will be), 
-                // we can reduce it to a single digit for standard elimination variety,
-                // or just use it directly. Using it directly is best for variance.
-                const finalNum = sequence[0];
-
-                // Step 3: FLAMES Elimination
-                let flames = ['F', 'L', 'A', 'M', 'E', 'S'];
-                let currIdx = 0;
-                while (flames.length > 1) {
-                    // Std FLAMES elimination formula
-                    currIdx = (currIdx + finalNum - 1) % flames.length;
-                    if (currIdx < 0) currIdx += flames.length;
-                    flames.splice(currIdx, 1);
-                }
-
-                return flames[0];
+                counts.push(count);
             }
 
-            calcBtn.onclick = () => {
-                const val1 = name1Input.value.trim();
-                const val2 = name2Input.value.trim();
-
-                if (!val1 || !val2) {
-                    calcBtn.innerText = "NAME BOTH SOULS!";
-                    setTimeout(() => calcBtn.innerText = "Check Destiny", 1500);
-                    return;
+            // Step 2: Number reduction (Interleaved Zig-Zag)
+            let sequence = counts;
+            while (sequence.length > 1) {
+                let sums = [];
+                let left = 0;
+                let right = sequence.length - 1;
+                while (left <= right) {
+                    if (left === right) {
+                        sums.push(sequence[left]);
+                    } else {
+                        sums.push(sequence[left] + sequence[right]);
+                    }
+                    left++;
+                    right--;
                 }
 
-                // Hide UI
-                cardUi.style.display = 'none';
-                loading.classList.add('active');
+                // Zig-Zag placement: S1 (idx 0), S2 (end), S3 (idx 1), S4 (end-1)...
+                let zigZag = new Array(sums.length);
+                let zLeft = 0;
+                let zRight = sums.length - 1;
+                for (let i = 0; i < sums.length; i++) {
+                    if (i % 2 === 0) {
+                        zigZag[zLeft++] = sums[i];
+                    } else {
+                        zigZag[zRight--] = sums[i];
+                    }
+                }
 
-                // Aesthetic Delay
-                setTimeout(() => {
-                    const resultLetter = calculateflames(val1, val2);
-                    const info = flamesMap[resultLetter];
+                // FIXED: Do NOT split digits here. Use the actual sums to maintain variance.
+                sequence = zigZag;
 
-                    loading.classList.remove('active');
-                    resultScreen.classList.add('active');
+                if (sequence.length === 1) break;
+            }
 
-                    // Reveal with Shuffle Effect
-                    let iterations = 0;
-                    const letters = ['F', 'L', 'A', 'M', 'E', 'S'];
-                    const shuffleInterval = setInterval(() => {
-                        letterEl.innerText = letters[Math.floor(Math.random() * letters.length)];
-                        iterations++;
+            // If the final number is somehow multi-digit (it will be), 
+            // we can reduce it to a single digit for standard elimination variety,
+            // or just use it directly. Using it directly is best for variance.
+            const finalNum = sequence[0];
 
-                        if (iterations > 15) {
-                            clearInterval(shuffleInterval);
-                            letterEl.innerText = resultLetter;
-                            meaningEl.innerText = info.meaning;
-                            subEl.innerText = info.sub;
-                        }
-                    }, 80);
-                }, 3000);
-            };
+            // Step 3: FLAMES Elimination
+            let flames = ['F', 'L', 'A', 'M', 'E', 'S'];
+            let currIdx = 0;
+            while (flames.length > 1) {
+                // Std FLAMES elimination formula
+                currIdx = (currIdx + finalNum - 1) % flames.length;
+                if (currIdx < 0) currIdx += flames.length;
+                flames.splice(currIdx, 1);
+            }
 
-            retryBtn.onclick = () => {
-                resultScreen.classList.remove('active');
-                cardUi.style.display = 'flex';
-                name1Input.value = '';
-                name2Input.value = '';
-            };
-
-            return () => { };
+            return flames[0];
         }
+
+        calcBtn.onclick = () => {
+            const val1 = name1Input.value.trim();
+            const val2 = name2Input.value.trim();
+
+            if (!val1 || !val2) {
+                calcBtn.innerText = "NAME BOTH SOULS!";
+                setTimeout(() => calcBtn.innerText = "Check Destiny", 1500);
+                return;
+            }
+
+            // Hide UI
+            cardUi.style.display = 'none';
+            loading.classList.add('active');
+
+            // Aesthetic Delay
+            setTimeout(() => {
+                const resultLetter = calculateflames(val1, val2);
+                const info = flamesMap[resultLetter];
+
+                loading.classList.remove('active');
+                resultScreen.classList.add('active');
+
+                // Reveal with Shuffle Effect
+                let iterations = 0;
+                const letters = ['F', 'L', 'A', 'M', 'E', 'S'];
+                const shuffleInterval = setInterval(() => {
+                    letterEl.innerText = letters[Math.floor(Math.random() * letters.length)];
+                    iterations++;
+
+                    if (iterations > 15) {
+                        clearInterval(shuffleInterval);
+                        letterEl.innerText = resultLetter;
+                        meaningEl.innerText = info.meaning;
+                        subEl.innerText = info.sub;
+                    }
+                }, 80);
+            }, 3000);
+        };
+
+        retryBtn.onclick = () => {
+            resultScreen.classList.remove('active');
+            cardUi.style.display = 'flex';
+            name1Input.value = '';
+            name2Input.value = '';
+        };
+
+        return () => { };
+    }
 
 }
 
