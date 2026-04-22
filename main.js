@@ -2030,29 +2030,58 @@ function initApp() {
         }
 
         function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (paused) return;
+            if (dx === 0 && dy === 0) return;
 
-            ctx.strokeStyle = 'rgba(255,255,255,0.03)';
-            ctx.lineWidth = 1;
-            for (let r = 0; r < ROWS; r++) {
-                for (let c = 0; c < COLS; c++) {
-                    ctx.strokeRect(c * CELL, r * CELL, CELL, CELL);
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            let head = { x: snake[0].x + dx, y: snake[0].y + dy };
+
+            head.x = (head.x + tileCount) % tileCount;
+            head.y = (head.y + tileCount) % tileCount;
+
+            snake.unshift(head);
+
+            if (snake.slice(1).some(p => p.x === head.x && p.y === head.y)) {
+                clearInterval(loop);
+                paused = true;
+                startBtn.innerText = 'Play Again';
+
+                if (score > highscore) {
+                    highscore = score;
+                    localStorage.setItem('snake-highscore', score);
+                    highEl.innerText = highscore;
                 }
+
+                setTimeout(() => window.showLossScreen(`You ran into yourself, ${playerName}.`), 500);
+                return;
             }
 
-            for (let r = 0; r < ROWS; r++) {
-                for (let c = 0; c < COLS; c++) {
-                    if (board[r][c]) {
-                        const isFlash = flashRows.includes(r);
-                        if (isFlash) {
-                            ctx.fillStyle = `rgba(255,255,255,${flashAlpha})`;
-                            ctx.fillRect(c * CELL, r * CELL, CELL, CELL);
-                        } else {
-                            drawCell(ctx, c, r, board[r][c]);
-                        }
-                    }
-                }
+            if (head.x === food.x && head.y === food.y) {
+                score += 10;
+                scoreEl.innerText = score;
+
+                food = {
+                    x: Math.floor(Math.random() * tileCount),
+                    y: Math.floor(Math.random() * tileCount)
+                };
+            } else {
+                snake.pop();
             }
+
+            ctx.fillStyle = '#ef4444';
+            ctx.beginPath();
+            ctx.arc(food.x * gridSize + gridSize/2, food.y * gridSize + gridSize/2, gridSize/3, 0, Math.PI * 2);
+            ctx.fill();
+
+            snake.forEach((p, i) => {
+                ctx.fillStyle = `rgba(16, 185, 129, ${1 - i / snake.length * 0.5})`;
+                ctx.beginPath();
+                ctx.roundRect(p.x * gridSize + 2, p.y * gridSize + 2, gridSize - 4, gridSize - 4, 5);
+                ctx.fill();
+            });
+        }
 
             if (currentPiece) {
                 const dy = ghostY();
@@ -3396,7 +3425,7 @@ function initApp() {
         return () => { };
     }
 
-}
+
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initApp);
