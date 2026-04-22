@@ -2451,7 +2451,7 @@ function initApp() {
         };
     }
     // --- POOLS (POLISHED) ---
-    function loadPools() {
+    function loadPools() { {
         gameContainer.innerHTML = `
             <div class="pools-container">
                 <div id="pools-setup" class="pools-setup-v2">
@@ -3424,8 +3424,7 @@ function initApp() {
 
         return () => { };
     }
-
-
+}
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initApp);
