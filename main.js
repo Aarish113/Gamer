@@ -753,8 +753,14 @@ function initApp() {
             ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, canvas.width, canvas.height);
             // Move
             if (dx === 0 && dy === 0) return;
-            const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+            let head = { x: snake[0].x + dx, y: snake[0].y + dy };
+
+            // APPLY WRAP BEFORE ADDING TO SNAKE
+            head.x = (head.x + tileCount) % tileCount;
+            head.y = (head.y + tileCount) % tileCount;
+
             snake.unshift(head);
+            
             if (head.x === food.x && head.y === food.y) {
                 score += 10; scoreEl.innerText = score;
                 food = { x: Math.floor(Math.random() * tileCount), y: Math.floor(Math.random() * tileCount) };
