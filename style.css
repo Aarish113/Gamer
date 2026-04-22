@@ -20,7 +20,7 @@
 
 html, body {
     height: 100%;
-    overflow: auto !important; /* Allow scrolling but hide bar */
+    overflow: hidden;
 }
 
 ::-webkit-scrollbar {
@@ -3780,4 +3780,33 @@ header p {
     .flame-result-letter {
         font-size: clamp(4rem, 25vh, 8rem);
     }
+}
+
+/* ---- MOBILE UI FOR POOLS ----*/
+@media (max-width: 768px) {
+    .pools-container {
+        padding: 10px;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .pools-board {
+        width: 100%;
+        max-width: 350px;
+    }
+
+    .pools-controls {
+        width: 100%;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .pools-controls button {
+        width: 100%;
+    }
+}
+
+/*----SCROLL BLOCK----*/
+#game-container {
+    touch-action: none;
 }

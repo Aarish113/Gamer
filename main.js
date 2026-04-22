@@ -8,7 +8,10 @@ function initApp() {
 
     let currentGameCleanup = null;
     let playerName = "Player"; // Default
-    let currentUTTTDifficulty = 'easy'; // Global for UTTT difficulty
+    let currentUTTTDifficulty = 'easy'; 
+    function setDifficulty(level) {
+        currentUTTTDifficulty = level;
+    } // Global for UTTT difficulty
 
     // --- SIDEBAR TOGGLE (DESKTOP) ---
     const sidebar = document.getElementById('sidebar');
@@ -19,6 +22,19 @@ function initApp() {
         };
     }
 
+    history.pushState({ page: 'app' }, '', '');
+
+    window.addEventListener('popstate', (e) => {
+        const gameView = document.getElementById('game-view');
+
+        if (gameView.classList.contains('active')) {
+            switchView('dashboard');
+            history.pushState({ page: 'app' }, '', '');
+        } else {
+            history.back();
+        }
+    });
+    
     function toggleSidebar(collapse) {
         if (!sidebar) return;
         // On mobile, collapsing means closing the drawer
@@ -408,7 +424,7 @@ function initApp() {
         'snake': () => `
             <ul>
                 <li>Eat red food to grow longer and earn points.</li>
-                <li>Avoid hitting walls or yourself!</li>
+                <li>Avoid yourself!</li>
                 ${isMobileDevice()
                 ? '<li>🕹️ <strong>Mobile:</strong> Swipe in the direction you want to go.</li>'
                 : '<li>⌨️ Use <strong>Arrow Keys</strong> to steer the snake.</li>'}
@@ -721,7 +737,7 @@ function initApp() {
         canvas.width = displaySize;
         canvas.height = displaySize;
 
-        const gridSize = 20, tileCount = canvas.width / gridSize;
+        const gridSize = 20, tileCount = Math.floor(canvas.width / gridSize);
         let score = 0, highscore = localStorage.getItem('snake-highscore') || 0, snake = [{ x: 10, y: 10 }], food = { x: 5, y: 5 }, dx = 0, dy = 0, loop = null, paused = true;
         highEl.innerText = highscore;
 
@@ -734,8 +750,25 @@ function initApp() {
                 score += 10; scoreEl.innerText = score;
                 food = { x: Math.floor(Math.random() * tileCount), y: Math.floor(Math.random() * tileCount) };
             } else snake.pop();
-            // Collision
-            if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount || snake.slice(1).some(p => p.x === head.x && p.y === head.y)) {
+            // Wrap around
+            head.x = (head.x + tileCount) % tileCount;
+            head.y = (head.y + tileCount) % tileCount;
+
+            // Self collision only
+            if (snake.slice(1).some(p => p.x === head.x && p.y === head.y)) {
+                clearInterval(loop);
+                paused = true;
+                startBtn.innerText = 'Play Again';
+
+                if (score > highscore) {
+                    highscore = score;
+                    localStorage.setItem('snake-highscore', score);
+                    highEl.innerText = highscore;
+                }
+
+                setTimeout(() => window.showLossScreen(`You ran into yourself, ${playerName}.`), 500);
+                return;
+            } {
                 clearInterval(loop); paused = true; startBtn.innerText = 'Play Again';
                 if (score > highscore) {
                     highscore = score;
@@ -1131,6 +1164,11 @@ function initApp() {
                 </div>
             </div>
         `;
+        const gameArea = document.getElementById('game-container');
+
+        gameArea.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+        }, { passive: false });
         currentGameCleanup = init2048Logic();
     }
 
