@@ -738,12 +738,21 @@ function initApp() {
         canvas.height = displaySize;
 
         const gridSize = 20, tileCount = Math.floor(canvas.width / gridSize);
-        let score = 0, highscore = localStorage.getItem('snake-highscore') || 0, snake = [{ x: 10, y: 10 }], food = { x: 5, y: 5 }, dx = 0, dy = 0, loop = null, paused = true;
+        let score = 0,
+            highscore = localStorage.getItem('snake-highscore') || 0,
+            snake = [{ x: 10, y: 10 }],
+            food = { x: 5, y: 5 },
+            dx = 0,
+            dy = 0,
+            loop = null,
+            paused = true;
         highEl.innerText = highscore;
 
         function draw() {
+            if (paused) return;
             ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, canvas.width, canvas.height);
             // Move
+            if (dx === 0 && dy === 0) return;
             const head = { x: snake[0].x + dx, y: snake[0].y + dy };
             snake.unshift(head);
             if (head.x === food.x && head.y === food.y) {
@@ -825,9 +834,26 @@ function initApp() {
 
         window.addEventListener('keydown', handleKeys);
         startBtn.addEventListener('click', () => {
-            if (paused) { paused = false; startBtn.innerText = 'Restart'; score = 0; scoreEl.innerText = 0; snake = [{ x: 10, y: 10 }]; dx = 1; dy = 0; loop = setInterval(draw, 100); }
-            else { clearInterval(loop); paused = true; startBtn.innerText = 'Start'; }
+            snake = [{ x: 10, y: 10 }];
+            food = {
+                x: Math.floor(Math.random() * tileCount),
+                y: Math.floor(Math.random() * tileCount)
+            };
+
+            dx = 1;
+            dy = 0;
+
+            score = 0;
+            scoreEl.innerText = score;
+
+            paused = false;
+
+            if (loop) clearInterval(loop);
+            loop = setInterval(draw, 120);
+
+            startBtn.innerText = 'Restart';
         });
+
         return () => { clearInterval(loop); window.removeEventListener('keydown', handleKeys); };
     }
 
