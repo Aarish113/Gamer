@@ -750,9 +750,10 @@ function initApp() {
 
         function draw() {
             if (paused) return;
-            ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-            // Move
             if (dx === 0 && dy === 0) return;
+            ctx.fillStyle = '#0f172a'; 
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Move
             let head = { x: snake[0].x + dx, y: snake[0].y + dy };
 
             // APPLY WRAP BEFORE ADDING TO SNAKE
@@ -760,7 +761,10 @@ function initApp() {
             head.y = (head.y + tileCount) % tileCount;
 
             snake.unshift(head);
-            
+            if (snake.slice(1).some(p => p.x === head.x && p.y === head.y)) {
+                // game over
+            }
+
             if (head.x === food.x && head.y === food.y) {
                 score += 10; scoreEl.innerText = score;
                 food = { x: Math.floor(Math.random() * tileCount), y: Math.floor(Math.random() * tileCount) };
@@ -840,14 +844,19 @@ function initApp() {
 
         window.addEventListener('keydown', handleKeys);
         startBtn.addEventListener('click', () => {
-            snake = [{ x: 10, y: 10 }];
-            food = {
-                x: Math.floor(Math.random() * tileCount),
-                y: Math.floor(Math.random() * tileCount)
-            };
 
+            // RESET STATE COMPLETELY
+            snake = [{ x: 5, y: 5 }];  // safe center
             dx = 1;
             dy = 0;
+
+            // SPAWN FOOD NOT ON SNAKE
+            do {
+                food = {
+                    x: Math.floor(Math.random() * tileCount),
+                    y: Math.floor(Math.random() * tileCount)
+                };
+            } while (food.x === snake[0].x && food.y === snake[0].y);
 
             score = 0;
             scoreEl.innerText = score;

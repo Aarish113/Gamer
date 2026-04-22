@@ -20,7 +20,8 @@
 
 html, body {
     height: 100%;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 
 ::-webkit-scrollbar {
@@ -3806,7 +3807,6 @@ header p {
     }
 }
 
-/*----SCROLL BLOCK----*/
-#game-container {
+#game-view #game-container {
     touch-action: none;
 }
