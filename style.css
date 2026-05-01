@@ -624,6 +624,7 @@ header p {
 .mines-preview { background: linear-gradient(45deg, #3b82f6, #6366f1); }
 .g2048-preview { background: linear-gradient(45deg, #f59e0b, #edc22e); }
 .tetris-preview { background: linear-gradient(45deg, #00f5ff, #ff006e); }
+.dino-preview { background: linear-gradient(135deg, #f97316, #ec4899); }
 
 
 /* Tetris Specific Styles */
@@ -2009,7 +2010,7 @@ header p {
 .loss-overlay {
     position: fixed;
     inset: 0;
-    background: radial-gradient(circle, rgba(153, 0, 0, 0.9) 0%, rgba(20, 0, 0, 0.95) 100%);
+    background: radial-gradient(circle, rgba(30, 27, 75, 0.9) 0%, rgba(10, 10, 20, 0.98) 100%);
     backdrop-filter: blur(15px);
     display: none;
     flex-direction: column;
@@ -2037,19 +2038,19 @@ header p {
     text-transform: uppercase;
     position: relative;
     color: white;
-    text-shadow: 0.05em 0 0 red, -0.05em -0.025em 0 rgba(0,255,0,0.7), -0.025em 0.05em 0 blue;
+    text-shadow: 0.05em 0 0 #6366f1, -0.05em -0.025em 0 rgba(168, 85, 247, 0.5), -0.025em 0.05em 0 rgba(59, 130, 246, 0.5);
     animation: glitch 1s infinite alternate;
 }
 
 @keyframes glitch {
-    0% { text-shadow: 0.05em 0 0 red, -0.05em -0.025em 0 rgba(0,255,0,0.7), -0.025em 0.05em 0 blue; }
-    100% { text-shadow: -0.05em -0.025em 0 red, 0.025em 0.025em 0 rgba(0,255,0,0.7), -0.05em -0.05em 0 blue; }
+    0% { text-shadow: 0.05em 0 0 #6366f1, -0.05em -0.025em 0 rgba(168, 85, 247, 0.5), -0.025em 0.05em 0 rgba(59, 130, 246, 0.5); }
+    100% { text-shadow: -0.05em -0.025em 0 #6366f1, 0.025em 0.025em 0 rgba(168, 85, 247, 0.5), -0.05em -0.05em 0 rgba(59, 130, 246, 0.5); }
 }
 
 .loss-declaration {
     font-size: clamp(1.8rem, 7vw, 3rem);
-    color: #ef4444;
-    text-shadow: 0 0 20px rgba(239, 68, 68, 0.8);
+    color: #818cf8;
+    text-shadow: 0 0 20px rgba(129, 140, 248, 0.4);
     font-weight: 900;
     margin: 10px 0;
     padding: 0 16px;
@@ -3813,6 +3814,46 @@ header p {
 #game-view #game-container {
     touch-action: none;
 }
+
+/* Dino Game Styles */
+.dino-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    animation: fadeIn 0.5s ease;
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.dino-stats {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 10px;
+}
+
+#dino-canvas {
+    background: #0f172a;
+    border-radius: 20px;
+    border: 2px solid var(--glass-border);
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.5), 0 0 15px var(--primary-glow);
+    max-width: 100%;
+    height: auto;
+    display: block;
+}
+
+.dino-controls {
+    margin-top: 20px;
+}
+
+.dino-hint {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-top: 10px;
+    font-style: italic;
+}
+
 
 @media (max-width: 768px) {
 

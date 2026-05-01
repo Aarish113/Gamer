@@ -9,6 +9,7 @@ function initApp() {
     let currentGameCleanup = null;
     let playerName = "Player"; // Default
     let currentUTTTDifficulty = 'easy'; 
+    let activeGameId = '';
     function setDifficulty(level) {
         currentUTTTDifficulty = level;
     } // Global for UTTT difficulty
@@ -122,10 +123,31 @@ function initApp() {
         }
     };
 
+    window.showVictoryScreen = function (message) {
+        const celebOverlay = document.getElementById('celebration-overlay');
+        const celebSubtext = document.getElementById('congrats-subtext');
+        if (celebOverlay && celebSubtext) {
+            celebSubtext.innerText = message;
+            celebOverlay.classList.add('active');
+        }
+    };
+
     if (lossCloseBtn) {
         lossCloseBtn.addEventListener('click', () => {
             lossOverlay.classList.remove('active');
             switchView('dashboard');
+        });
+    }
+
+    const retryBtn = document.getElementById('btn-retry-loss');
+    if (retryBtn) {
+        retryBtn.addEventListener('click', () => {
+            lossOverlay.classList.remove('active');
+            if (activeGameId) {
+                window.launchGame(activeGameId);
+            } else {
+                switchView('dashboard');
+            }
         });
     }
 
@@ -291,7 +313,8 @@ function initApp() {
             'ultimate-ttt': '#a855f7',
             'safe-crossing': '#4ecdc4',
             'pools': '#3b82f6',
-            'the-flame': '#FF416C'
+            'the-flame': '#FF416C',
+            'dino': '#f97316'
         };
 
         const statusMessages = [
@@ -398,6 +421,10 @@ function initApp() {
                 gameTitle.innerText = 'THE FLAME';
                 loadTheFlame();
                 break;
+            case 'dino':
+                gameTitle.innerText = 'Neon Dino';
+                loadDino();
+                break;
             default:
                 console.error('Unknown game ID:', gameId);
         }
@@ -410,7 +437,6 @@ function initApp() {
     const rulesContent = document.getElementById('rules-content');
     const closeRules = document.getElementById('close-rules');
     const btnRules = document.getElementById('btn-rules');
-    let activeGameId = '';
 
     const GAME_RULES = {
         'tic-tac-toe': () => `
@@ -500,6 +526,14 @@ function initApp() {
                 <li><strong>F</strong>: Friends | <strong>L</strong>: Lovers | <strong>A</strong>: Affection</li>
                 <li><strong>M</strong>: Marriage | <strong>E</strong>: Enemies | <strong>S</strong>: Siblings</li>
                 <li>Results are calculated with precision—trust the logic... or don't!</li>
+            </ul>
+        `,
+        'dino': () => `
+            <ul>
+                <li>Press <strong>Space</strong> or <strong>Up Arrow</strong> to jump over obstacles.</li>
+                <li>Avoid the cacti and neon obstacles!</li>
+                <li>The speed increases as you go.</li>
+                ${isMobileDevice() ? '<li><strong>Mobile:</strong> Tap the screen to jump.</li>' : ''}
             </ul>
         `
     };
@@ -2030,60 +2064,27 @@ function initApp() {
         }
 
         function draw() {
-            if (paused) return;
-            if (dx === 0 && dy === 0) return;
-
             ctx.fillStyle = '#0f172a';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            let head = { x: snake[0].x + dx, y: snake[0].y + dy };
-
-            head.x = (head.x + tileCount) % tileCount;
-            head.y = (head.y + tileCount) % tileCount;
-
-            snake.unshift(head);
-
-            if (snake.slice(1).some(p => p.x === head.x && p.y === head.y)) {
-                clearInterval(loop);
-                paused = true;
-                startBtn.innerText = 'Play Again';
-
-                if (score > highscore) {
-                    highscore = score;
-                    localStorage.setItem('snake-highscore', score);
-                    highEl.innerText = highscore;
+            // Draw Board
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    if (board[r][c]) {
+                        drawCell(ctx, c, r, board[r][c]);
+                    }
                 }
-
-                setTimeout(() => window.showLossScreen(`You ran into yourself, ${playerName}.`), 500);
-                return;
             }
 
-            if (head.x === food.x && head.y === food.y) {
-                score += 10;
-                scoreEl.innerText = score;
-
-                food = {
-                    x: Math.floor(Math.random() * tileCount),
-                    y: Math.floor(Math.random() * tileCount)
-                };
-            } else {
-                snake.pop();
+            // Draw Cleared Row Flash
+            if (flashAlpha > 0) {
+                ctx.fillStyle = `rgba(255, 255, 255, ${flashAlpha})`;
+                flashRows.forEach(r => ctx.fillRect(0, r * CELL, canvas.width, CELL));
+                flashAlpha = Math.max(0, flashAlpha - 0.08);
             }
-
-            ctx.fillStyle = '#ef4444';
-            ctx.beginPath();
-            ctx.arc(food.x * gridSize + gridSize/2, food.y * gridSize + gridSize/2, gridSize/3, 0, Math.PI * 2);
-            ctx.fill();
-
-            snake.forEach((p, i) => {
-                ctx.fillStyle = `rgba(16, 185, 129, ${1 - i / snake.length * 0.5})`;
-                ctx.beginPath();
-                ctx.roundRect(p.x * gridSize + 2, p.y * gridSize + 2, gridSize - 4, gridSize - 4, 5);
-                ctx.fill();
-            });
-        }
 
             if (currentPiece) {
+                // Draw Ghost
                 const dy = ghostY();
                 ctx.globalAlpha = 0.18;
                 ctx.shadowColor = COLORS[currentPiece.type].glow;
@@ -2099,13 +2100,15 @@ function initApp() {
                 ctx.globalAlpha = 1;
                 ctx.shadowBlur = 0;
 
-                for (let r = 0; r < currentPiece.matrix.length; r++)
-                    for (let c = 0; c < currentPiece.matrix[r].length; c++)
-                        if (currentPiece.matrix[r][c])
+                // Draw Current Piece
+                for (let r = 0; r < currentPiece.matrix.length; r++) {
+                    for (let c = 0; c < currentPiece.matrix[r].length; c++) {
+                        if (currentPiece.matrix[r][c]) {
                             drawCell(ctx, currentPiece.x + c, currentPiece.y + r, currentPiece.type);
+                        }
+                    }
+                }
             }
-
-            if (flashAlpha > 0) flashAlpha = Math.max(0, flashAlpha - 0.12);
         }
 
         function drawNext() {
@@ -2451,7 +2454,7 @@ function initApp() {
         };
     }
     // --- POOLS (POLISHED) ---
-    function loadPools() { {
+    function loadPools() {
         gameContainer.innerHTML = `
             <div class="pools-container">
                 <div id="pools-setup" class="pools-setup-v2">
@@ -3424,6 +3427,283 @@ function initApp() {
 
         return () => { };
     }
+
+    // --- NEON DINO ---
+    function loadDino() {
+        gameContainer.innerHTML = `
+            <div class="dino-container">
+                <div class="dino-stats">
+                    <div class="stat-box">Score: <span id="dino-score">0</span></div>
+                    <div class="stat-box">High Score: <span id="dino-highscore">0</span></div>
+                </div>
+                <canvas id="dino-canvas" width="800" height="300"></canvas>
+                <div class="dino-controls">
+                    <button id="dino-start" class="btn-play">Start Running</button>
+                </div>
+                <div class="dino-hint">Press SPACE or TAP to Jump</div>
+            </div>
+        `;
+        currentGameCleanup = initDinoLogic();
+    }
+
+    function initDinoLogic() {
+        const canvas = document.getElementById('dino-canvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('dino-score');
+        const highEl = document.getElementById('dino-highscore');
+        const startBtn = document.getElementById('dino-start');
+
+        let score = 0;
+        let highscore = localStorage.getItem('dino-highscore') || 0;
+        highEl.innerText = highscore;
+
+        let gameActive = false;
+        let animationId;
+        let speed = 5;
+        let frameCount = 0;
+
+        const player = {
+            x: 50,
+            y: 0,
+            width: 40,
+            height: 40,
+            dy: 0,
+            jumpForce: 12,
+            gravity: 0.6,
+            grounded: true,
+            color: '#f97316'
+        };
+
+        const obstacles = [];
+        const particles = [];
+
+        function createParticle(x, y, color) {
+            for (let i = 0; i < 5; i++) {
+                particles.push({
+                    x, y,
+                    dx: (Math.random() - 0.5) * 5,
+                    dy: (Math.random() - 0.5) * 5,
+                    size: Math.random() * 3 + 1,
+                    life: 1,
+                    color
+                });
+            }
+        }
+
+        function jump() {
+            if (!gameActive) return;
+            if (player.grounded) {
+                player.dy = -player.jumpForce;
+                player.grounded = false;
+                createParticle(player.x + player.width / 2, player.y + player.height, player.color);
+            }
+        }
+
+        function update() {
+            if (!gameActive) return;
+
+            frameCount++;
+            if (frameCount % 10 === 0) {
+                score++;
+                scoreEl.innerText = score;
+                if (score % 100 === 0) speed += 0.5;
+            }
+
+            // Player Physics
+            player.dy += player.gravity;
+            player.y += player.dy;
+
+            const groundY = canvas.height - 40;
+            if (player.y + player.height > groundY) {
+                player.y = groundY - player.height;
+                player.dy = 0;
+                player.grounded = true;
+            }
+
+            // Obstacles
+            if (frameCount % Math.max(50, 100 - Math.floor(speed * 2)) === 0) {
+                const height = 30 + Math.random() * 40;
+                obstacles.push({
+                    x: canvas.width,
+                    y: groundY - height,
+                    width: 20,
+                    height: height,
+                    color: '#ec4899'
+                });
+            }
+
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                const obs = obstacles[i];
+                obs.x -= speed;
+
+                // Collision
+                if (
+                    player.x < obs.x + obs.width &&
+                    player.x + player.width > obs.x &&
+                    player.y < obs.y + obs.height &&
+                    player.y + player.height > obs.y
+                ) {
+                    gameOver();
+                }
+
+                if (obs.x + obs.width < 0) obstacles.splice(i, 1);
+            }
+
+            // Particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.dx;
+                p.y += p.dy;
+                p.life -= 0.02;
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+
+            draw();
+            animationId = requestAnimationFrame(update);
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Ground Line
+            const groundY = canvas.height - 40;
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, groundY);
+            ctx.lineTo(canvas.width, groundY);
+            ctx.stroke();
+
+            // Ground Glow
+            ctx.strokeStyle = 'var(--primary)';
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = 'var(--primary)';
+            ctx.beginPath();
+            ctx.moveTo(0, groundY);
+            ctx.lineTo(canvas.width, groundY);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            // Player (Neon Dino Shape)
+            ctx.fillStyle = player.color;
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = player.color;
+            
+            // Draw stylized Dino
+            ctx.save();
+            ctx.translate(player.x, player.y);
+            
+            // Body
+            ctx.fillRect(0, 10, 30, 25); 
+            // Head
+            ctx.fillRect(15, 0, 20, 15);
+            // Eye
+            ctx.fillStyle = '#000';
+            ctx.fillRect(30, 4, 3, 3);
+            ctx.fillStyle = player.color;
+            // Tail
+            ctx.beginPath();
+            ctx.moveTo(0, 15);
+            ctx.lineTo(-10, 30);
+            ctx.lineTo(5, 30);
+            ctx.fill();
+            // Feet
+            ctx.fillRect(5, 35, 8, 5);
+            ctx.fillRect(18, 35, 8, 5);
+            
+            ctx.restore();
+            ctx.shadowBlur = 0;
+
+            // Obstacles (Neon Cacti)
+            obstacles.forEach(obs => {
+                ctx.fillStyle = obs.color;
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = obs.color;
+                
+                ctx.save();
+                ctx.translate(obs.x, obs.y);
+                
+                // Main stem
+                ctx.fillRect(obs.width/2 - 4, 0, 8, obs.height);
+                // Left arm
+                if (obs.height > 40) {
+                    ctx.fillRect(obs.width/2 - 12, 15, 8, 5);
+                    ctx.fillRect(obs.width/2 - 12, 5, 4, 15);
+                }
+                // Right arm
+                ctx.fillRect(obs.width/2 + 4, 25, 8, 5);
+                ctx.fillRect(obs.width/2 + 8, 10, 4, 20);
+                
+                ctx.restore();
+                ctx.shadowBlur = 0;
+            });
+
+            // Particles
+            particles.forEach(p => {
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = p.life;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            ctx.globalAlpha = 1;
+        }
+
+        function gameOver() {
+            gameActive = false;
+            cancelAnimationFrame(animationId);
+            startBtn.innerText = 'Run Again';
+            startBtn.style.display = 'block';
+
+            if (score > highscore) {
+                highscore = score;
+                localStorage.setItem('dino-highscore', highscore);
+                highEl.innerText = highscore;
+            }
+
+            setTimeout(() => window.showLossScreen(`You tripped over a neon cactus, ${playerName}. How... luminous of you.`), 500);
+        }
+
+        function startGame() {
+            score = 0;
+            scoreEl.innerText = '0';
+            speed = 5;
+            frameCount = 0;
+            obstacles.length = 0;
+            particles.length = 0;
+            player.y = canvas.height - 40 - player.height;
+            player.dy = 0;
+            gameActive = true;
+            startBtn.style.display = 'none';
+            update();
+        }
+
+        startBtn.onclick = startGame;
+
+        const handleKeyDown = (e) => {
+            if (e.code === 'Space' || e.code === 'ArrowUp') {
+                e.preventDefault();
+                jump();
+            }
+        };
+
+        const handleTouch = (e) => {
+            e.preventDefault();
+            jump();
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        canvas.addEventListener('touchstart', handleTouch);
+
+        draw(); // Initial draw
+
+        return () => {
+            cancelAnimationFrame(animationId);
+            window.removeEventListener('keydown', handleKeyDown);
+            canvas.removeEventListener('touchstart', handleTouch);
+        };
+    }
+
 }
 
 if (document.readyState === 'loading') {
