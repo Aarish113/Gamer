@@ -298,17 +298,9 @@ main {
     overflow: hidden;
 }
 
+/* Rotating border removed per user request */
 .welcome-card::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: conic-gradient(from 0deg, transparent, var(--primary), transparent 30%);
-    animation: rotateBorder 10s linear infinite;
-    opacity: 0.1;
-    pointer-events: none;
+    display: none;
 }
 
 @keyframes rotateBorder {
@@ -402,21 +394,21 @@ main {
     width: 100%;
     height: 100%;
     border-top-color: var(--primary);
-    animation: spin 2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+    /* animation removed */
 }
 
 .circle-2 {
     width: 80%;
     height: 80%;
     border-bottom-color: var(--secondary);
-    animation: spin 1.5s cubic-bezier(0.5, 0, 0.5, 1) infinite reverse;
+    /* animation removed */
 }
 
 .circle-3 {
     width: 60%;
     height: 60%;
     border-left-color: #fff;
-    animation: spin 1s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+    /* animation removed */
 }
 
 .loader-core {
@@ -3475,25 +3467,146 @@ header p {
         font-size: 0.95rem;
     }
 
-    /* ---- POOLS ---- */
+    /* ---- POOLS MOBILE RE-ARRANGEMENT ---- */
     .pools-game-layout {
-        grid-template-columns: 1fr;
-        gap: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        padding: 5px;
+        max-width: 100vw;
     }
 
     .pools-setup-v2 {
-        padding: 30px 20px;
-        border-radius: 24px;
+        padding: 25px 15px;
+        border-radius: 20px;
+        width: 95%;
     }
 
-    .avatar-wrap {
-        width: 56px;
-        height: 56px;
+    /* Move chips above table */
+    #betting-controls-left {
+        order: 1;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        background: rgba(15, 23, 42, 0.6);
+        border-radius: 16px;
+        padding: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    #betting-controls-left .chip-group {
+        display: flex;
+        gap: 8px;
+        flex-wrap: nowrap;
+    }
+
+    #betting-controls-left .chip-btn {
+        width: 45px;
+        height: 45px;
+        font-size: 0.9rem;
+    }
+
+    #betting-controls-left .bet-display-wrap {
+        font-size: 1rem !important;
+        margin-left: 15px;
+    }
+
+    .table-area {
+        order: 2;
+        padding: 0;
+        transform: scale(0.95); /* Slight scale to fit better */
     }
 
     .pools-table {
+        aspect-ratio: 1.2 / 1; /* More square for mobile */
+        border-radius: 60px;
         border-width: 6px;
-        border-radius: 80px;
+    }
+
+    .pools-table-inner {
+        border-radius: 54px;
+    }
+
+    /* Adjust player positions for the more square table */
+    .seat-1 { left: 0% !important; top: 50% !important; transform: translate(-20px, -50%) !important; }
+    .seat-3 { right: 0% !important; top: 50% !important; transform: translate(20px, -50%) !important; }
+    .seat-2 { top: 0% !important; left: 50% !important; transform: translate(-50%, -20px) !important; }
+    .seat-0 { bottom: 0% !important; left: 50% !important; transform: translate(-50%, 20px) !important; }
+
+    .avatar-wrap {
+        width: 50px;
+        height: 50px;
+    }
+
+    .player-coins {
+        width: 22px;
+        height: 22px;
+        font-size: 0.7rem;
+    }
+
+    .player-name {
+        font-size: 0.7rem;
+    }
+
+    .card {
+        width: 30px;
+        height: 45px;
+        font-size: 0.8rem;
+    }
+
+    /* Action panels below table */
+    #betting-controls-right {
+        order: 3;
+        width: 100%;
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
+        gap: 10px;
+        padding: 0;
+        visibility: visible;
+    }
+
+    .betting-box {
+        padding: 10px;
+        border-radius: 16px;
+        width: 100%;
+        max-width: 400px;
+    }
+
+    .betting-box h3 {
+        font-size: 0.85rem;
+        margin-bottom: 5px;
+    }
+
+    .combination-btns {
+        gap: 6px;
+    }
+
+    .combo-btn {
+        padding: 8px 0;
+        font-size: 0.8rem;
+    }
+
+    .btn-action {
+        padding: 10px;
+        font-size: 0.8rem;
+    }
+
+    #target-hint {
+        font-size: 0.6rem !important;
+    }
+
+    #results-box {
+        max-height: 250px; /* Smaller summary */
+    }
+
+    #results-content {
+        gap: 8px;
+    }
+
+    .pools-message {
+        font-size: 0.8rem;
+        margin-top: 10px;
     }
 
     /* ---- THE FLAME ---- */
@@ -3586,9 +3699,16 @@ header p {
 
     /* ---- WELCOME SCREEN ---- */
     .welcome-card {
-        padding: 28px 16px;
-        border-radius: 20px;
-        width: 95%;
+        padding: 30px 24px;
+        border-radius: 24px;
+        width: 90%;
+        max-width: 320px;
+        margin: auto;
+        display: flex;
+        flex-direction: column;
+        align-items: center; /* Center all contents */
+        text-align: center;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.5);
     }
 
     .welcome-card h2 {
@@ -3600,9 +3720,23 @@ header p {
         margin-bottom: 20px;
     }
 
+    .input-group {
+        width: 100%;
+        align-items: center;
+    }
+
     .input-group input {
         font-size: 16px !important;
         padding: 14px 16px;
+        width: 100%;
+        max-width: 220px; /* Small and centered */
+    }
+
+    .welcome-card .btn-play {
+        width: 100%;
+        max-width: 220px; /* Matching width */
+        padding: 12px;
+        font-size: 0.9rem;
     }
 
     /* ---- TIC TAC TOE ---- */
