@@ -158,7 +158,10 @@ function initApp() {
             currentGameCleanup = null;
         }
 
-        views.forEach(v => v.classList.remove('active'));
+        views.forEach(v => {
+            v.classList.remove('active');
+            v.style.display = ''; // Clear any inline styles that might interfere
+        });
         const targetView = document.getElementById(viewId);
         if (targetView) targetView.classList.add('active');
 
