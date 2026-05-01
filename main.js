@@ -425,6 +425,10 @@ function initApp() {
                 gameTitle.innerText = 'Neon Dino';
                 loadDino();
                 break;
+            case 'brick-breaker':
+                gameTitle.innerText = 'Brick Breaker';
+                loadBrickBreaker();
+                break;
             default:
                 console.error('Unknown game ID:', gameId);
         }
@@ -534,6 +538,15 @@ function initApp() {
                 <li>Avoid the cacti and neon obstacles!</li>
                 <li>The speed increases as you go.</li>
                 ${isMobileDevice() ? '<li><strong>Mobile:</strong> Tap the screen to jump.</li>' : ''}
+            </ul>
+        `,
+        'brick-breaker': () => `
+            <ul>
+                <li>Move the paddle to keep the ball in play and break all the bricks.</li>
+                <li><strong>Controls:</strong> Mouse or Left/Right Arrow Keys to move.</li>
+                <li><strong>Power-Ups:</strong> Catch falling letters for special abilities!</li>
+                <li><strong>(M)</strong> Multi-ball | <strong>(W)</strong> Wide Paddle | <strong>(F)</strong> Fireball</li>
+                <li>Clear all bricks to reach the next level. You have 3 lives!</li>
             </ul>
         `
     };
@@ -3701,6 +3714,417 @@ function initApp() {
             cancelAnimationFrame(animationId);
             window.removeEventListener('keydown', handleKeyDown);
             canvas.removeEventListener('touchstart', handleTouch);
+        };
+    }
+
+    // --- BRICK BREAKER ---
+    function loadBrickBreaker() {
+        gameContainer.innerHTML = `
+            <div class="brick-container">
+                <div class="brick-stats">
+                    <div class="brick-stat-item">SCORE: <span id="bb-score">0</span></div>
+                    <div class="brick-stat-item">LIVES: <span id="bb-lives">3</span></div>
+                    <div class="brick-stat-item">LEVEL: <span id="bb-level">1</span></div>
+                </div>
+                <div class="brick-canvas-wrapper" id="bb-wrapper">
+                    <canvas id="brick-canvas" width="800" height="600"></canvas>
+                    <div id="bb-overlay" class="brick-overlay">
+                        <div class="brick-overlay-title">BRICK BREAKER</div>
+                        <div class="brick-overlay-sub">Smash the bricks. Catch the power-ups.<br>Don't let the ball fall.</div>
+                        <button id="bb-start-btn" class="brick-start-btn">Start Mission</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        currentGameCleanup = initBrickBreakerLogic();
+    }
+
+    function initBrickBreakerLogic() {
+        const canvas = document.getElementById('brick-canvas');
+        if (!canvas) return () => { };
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('bb-score');
+        const livesEl = document.getElementById('bb-lives');
+        const levelEl = document.getElementById('bb-level');
+        const overlay = document.getElementById('bb-overlay');
+        const startBtn = document.getElementById('bb-start-btn');
+        const wrapper = document.getElementById('bb-wrapper');
+
+        // Game Constants
+        const PADDLE_HEIGHT = 15;
+        const PADDLE_WIDTH = 120;
+        const BALL_RADIUS = 8;
+        const BRICK_ROWS = 5;
+        const BRICK_COLS = 10;
+        const BRICK_PADDING = 10;
+        const BRICK_OFFSET_TOP = 40;
+        const BRICK_OFFSET_LEFT = 35;
+        const BRICK_COLORS = ['#06b6d4', '#ec4899', '#8b5cf6', '#10b981', '#f59e0b'];
+
+        // Game State
+        let score = 0;
+        let lives = 3;
+        let level = 1;
+        let gameActive = false;
+        let animationId;
+        let shakeTime = 0;
+        
+        let paddle = { x: (canvas.width - PADDLE_WIDTH) / 2, y: canvas.height - 30, width: PADDLE_WIDTH, height: PADDLE_HEIGHT, color: '#fff' };
+        let balls = [];
+        let bricks = [];
+        let powerUps = [];
+        let particles = [];
+        
+        let rightPressed = false;
+        let leftPressed = false;
+        let fireballActive = 0; // Timer for fireball
+        let widePaddleActive = 0; // Timer for wide paddle
+
+        function initLevel() {
+            const rows = BRICK_ROWS + Math.floor(level / 2);
+            const cols = BRICK_COLS;
+            // Corrected formula for perfect centering: use (cols - 1) gaps
+            const bWidth = (canvas.width - (BRICK_OFFSET_LEFT * 2) - ((cols - 1) * BRICK_PADDING)) / cols;
+            const bHeight = 25;
+
+            bricks = [];
+            for (let c = 0; c < cols; c++) {
+                bricks[c] = [];
+                for (let r = 0; r < rows; r++) {
+                    bricks[c][r] = { 
+                        x: 0, y: 0, status: 1, 
+                        color: BRICK_COLORS[r % BRICK_COLORS.length],
+                        isPowerUp: Math.random() < 0.15 
+                    };
+                }
+            }
+            
+            // Reset ball
+            balls = [{
+                x: canvas.width / 2,
+                y: canvas.height - 50,
+                dx: 4 + level,
+                dy: -(4 + level),
+                radius: BALL_RADIUS,
+                color: '#fff'
+            }];
+            
+            paddle.width = PADDLE_WIDTH;
+            fireballActive = 0;
+            widePaddleActive = 0;
+        }
+
+        function createParticles(x, y, color) {
+            for (let i = 0; i < 10; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: (Math.random() - 0.5) * 8,
+                    size: Math.random() * 4,
+                    life: 1.0,
+                    color: color
+                });
+            }
+        }
+
+        function spawnPowerUp(x, y) {
+            const types = ['M', 'W', 'F'];
+            const type = types[Math.floor(Math.random() * types.length)];
+            powerUps.push({ x, y, type, dy: 3, radius: 15 });
+        }
+
+        function drawBricks() {
+            const cols = bricks.length;
+            const rows = bricks[0].length;
+            const bWidth = (canvas.width - (BRICK_OFFSET_LEFT * 2) - ((cols - 1) * BRICK_PADDING)) / cols;
+            const bHeight = 25;
+
+            for (let c = 0; c < cols; c++) {
+                for (let r = 0; r < rows; r++) {
+                    if (bricks[c][r].status === 1) {
+                        const brickX = (c * (bWidth + BRICK_PADDING)) + BRICK_OFFSET_LEFT;
+                        const brickY = (r * (bHeight + BRICK_PADDING)) + BRICK_OFFSET_TOP;
+                        bricks[c][r].x = brickX;
+                        bricks[c][r].y = brickY;
+                        bricks[c][r].w = bWidth;
+                        bricks[c][r].h = bHeight;
+
+                        ctx.beginPath();
+                        ctx.roundRect(brickX, brickY, bWidth, bHeight, 4);
+                        ctx.fillStyle = bricks[c][r].color;
+                        ctx.fill();
+                        ctx.closePath();
+                        
+                        // Subtle inner highlight for "glow" look without performance hit
+                        ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(brickX + 1, brickY + 1, bWidth - 2, bHeight - 2);
+                    }
+                }
+            }
+        }
+
+        function drawPaddle() {
+            ctx.beginPath();
+            ctx.roundRect(paddle.x, paddle.y, paddle.width, paddle.height, 8);
+            ctx.fillStyle = widePaddleActive > 0 ? '#10b981' : '#fff';
+            ctx.fill();
+            ctx.closePath();
+        }
+
+        function drawBall(ball) {
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            ctx.fillStyle = fireballActive > 0 ? '#ef4444' : '#fff';
+            ctx.fill();
+            ctx.closePath();
+            
+            if (fireballActive > 0) {
+                // Trail effect
+                ctx.beginPath();
+                ctx.arc(ball.x - ball.dx, ball.y - ball.dy, ball.radius * 0.8, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(239, 68, 68, 0.4)';
+                ctx.fill();
+                ctx.closePath();
+            }
+        }
+
+        function drawPowerUps() {
+            powerUps.forEach((p, index) => {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fillStyle = '#000';
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.fill();
+                ctx.stroke();
+                
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 12px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(p.type, p.x, p.y);
+                ctx.closePath();
+            });
+        }
+
+        function drawParticles() {
+            particles.forEach((p, index) => {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = p.life;
+                ctx.fill();
+                ctx.closePath();
+                ctx.globalAlpha = 1.0;
+            });
+        }
+
+        function collisionDetection() {
+            bricks.forEach(column => {
+                column.forEach(b => {
+                    if (b.status === 1) {
+                        balls.forEach(ball => {
+                            if (ball.x > b.x && ball.x < b.x + b.w && ball.y > b.y && ball.y < b.y + b.h) {
+                                if (fireballActive <= 0) ball.dy = -ball.dy;
+                                b.status = 0;
+                                score += 10;
+                                scoreEl.innerText = score;
+                                shakeTime = 5;
+                                createParticles(b.x + b.w / 2, b.y + b.h / 2, b.color);
+                                
+                                if (b.isPowerUp) spawnPowerUp(b.x + b.w / 2, b.y + b.h / 2);
+                                
+                                // Check for level clear
+                                if (bricks.every(col => col.every(br => br.status === 0))) {
+                                    level++;
+                                    levelEl.innerText = level;
+                                    initLevel();
+                                }
+                            }
+                        });
+                    }
+                });
+            });
+        }
+
+        function update() {
+            if (!gameActive) return;
+
+            // Clear Canvas
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Screen Shake
+            if (shakeTime > 0) {
+                ctx.save();
+                const dx = (Math.random() - 0.5) * 6;
+                const dy = (Math.random() - 0.5) * 6;
+                ctx.translate(dx, dy);
+                shakeTime--;
+            }
+
+            drawBricks();
+            drawPaddle();
+            drawPowerUps();
+            drawParticles();
+            balls.forEach(drawBall);
+
+            if (shakeTime > 0) ctx.restore();
+
+            // Ball Physics
+            balls.forEach((ball, bIndex) => {
+                if (ball.x + ball.dx > canvas.width - ball.radius || ball.x + ball.dx < ball.radius) {
+                    ball.dx = -ball.dx;
+                }
+                if (ball.y + ball.dy < ball.radius) {
+                    ball.dy = -ball.dy;
+                } else if (ball.y + ball.dy > canvas.height - ball.radius - 15) {
+                    if (ball.x > paddle.x && ball.x < paddle.x + paddle.width) {
+                        // Paddle hit - angle calculation
+                        let hitPos = (ball.x - (paddle.x + paddle.width / 2)) / (paddle.width / 2);
+                        ball.dx = hitPos * 8;
+                        ball.dy = -Math.abs(ball.dy);
+                    } else if (ball.y + ball.dy > canvas.height - ball.radius) {
+                        // Ball lost
+                        balls.splice(bIndex, 1);
+                        if (balls.length === 0) {
+                            lives--;
+                            livesEl.innerText = lives;
+                            if (lives === 0) {
+                                gameOver();
+                            } else {
+                                balls.push({
+                                    x: canvas.width / 2,
+                                    y: canvas.height - 50,
+                                    dx: 4 + level,
+                                    dy: -(4 + level),
+                                    radius: BALL_RADIUS,
+                                    color: '#fff'
+                                });
+                                fireballActive = 0;
+                                widePaddleActive = 0;
+                                paddle.width = PADDLE_WIDTH;
+                            }
+                        }
+                    }
+                }
+                ball.x += ball.dx;
+                ball.y += ball.dy;
+            });
+
+            // PowerUp Physics
+            powerUps.forEach((p, index) => {
+                p.y += p.dy;
+                if (p.x > paddle.x && p.x < paddle.x + paddle.width && p.y > paddle.y && p.y < paddle.y + paddle.height) {
+                    // Activate PowerUp
+                    if (p.type === 'M') {
+                        // Multi-ball
+                        const b = balls[0] || { x: canvas.width/2, y: canvas.height-50, dx: 5, dy: -5 };
+                        balls.push({ ...b, dx: -b.dx, dy: b.dy });
+                        balls.push({ ...b, dx: b.dx * 0.5, dy: b.dy * 1.5 });
+                    } else if (p.type === 'W') {
+                        // Wide Paddle
+                        paddle.width = PADDLE_WIDTH * 2;
+                        widePaddleActive = 300; // 5 seconds at 60fps
+                    } else if (p.type === 'F') {
+                        // Fireball
+                        fireballActive = 300;
+                    }
+                    powerUps.splice(index, 1);
+                } else if (p.y > canvas.width) {
+                    powerUps.splice(index, 1);
+                }
+            });
+
+            // Timers
+            if (widePaddleActive > 0) {
+                widePaddleActive--;
+                if (widePaddleActive === 0) paddle.width = PADDLE_WIDTH;
+            }
+            if (fireballActive > 0) fireballActive--;
+
+            // Particle Physics
+            particles.forEach((p, index) => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= 0.02;
+                if (p.life <= 0) particles.splice(index, 1);
+            });
+
+            // Paddle Movement
+            if (rightPressed && paddle.x < canvas.width - paddle.width) {
+                paddle.x += 8;
+            } else if (leftPressed && paddle.x > 0) {
+                paddle.x -= 8;
+            }
+
+            collisionDetection();
+            animationId = requestAnimationFrame(update);
+        }
+
+        function gameOver() {
+            gameActive = false;
+            cancelAnimationFrame(animationId);
+            document.querySelector('.brick-overlay-title').innerText = 'GAME OVER';
+            document.querySelector('.brick-overlay-sub').innerHTML = `Final Score: <span>${score}</span><br>Reached Level: <span>${level}</span>`;
+            document.getElementById('bb-start-btn').innerText = 'Retry Mission';
+            overlay.style.display = 'flex';
+            setTimeout(() => window.showLossScreen(`You failed the mission, ${playerName}. The bricks won.`), 500);
+        }
+
+        function startMission() {
+            score = 0; lives = 3; level = 1;
+            scoreEl.innerText = '0';
+            livesEl.innerText = '3';
+            levelEl.innerText = '1';
+            overlay.style.display = 'none';
+            gameActive = true;
+            initLevel();
+            update();
+        }
+
+        startBtn.onclick = startMission;
+
+        // Listeners
+        const handleKeyDown = (e) => {
+            if (e.key === 'Right' || e.key === 'ArrowRight') rightPressed = true;
+            else if (e.key === 'Left' || e.key === 'ArrowLeft') leftPressed = true;
+        };
+        const handleKeyUp = (e) => {
+            if (e.key === 'Right' || e.key === 'ArrowRight') rightPressed = false;
+            else if (e.key === 'Left' || e.key === 'ArrowLeft') leftPressed = false;
+        };
+        const handleMouse = (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const root = document.documentElement;
+            const mouseX = e.clientX - rect.left - root.scrollLeft;
+            paddle.x = mouseX - paddle.width / 2;
+            if (paddle.x < 0) paddle.x = 0;
+            if (paddle.x > canvas.width - paddle.width) paddle.x = canvas.width - paddle.width;
+        };
+        const handleTouch = (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            const touchX = touch.clientX - rect.left;
+            paddle.x = touchX - paddle.width / 2;
+            if (paddle.x < 0) paddle.x = 0;
+            if (paddle.x > canvas.width - paddle.width) paddle.x = canvas.width - paddle.width;
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('keyup', handleKeyUp);
+        window.addEventListener('mousemove', handleMouse);
+        canvas.addEventListener('touchmove', handleTouch, { passive: false });
+
+        return () => {
+            gameActive = false;
+            cancelAnimationFrame(animationId);
+            window.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('keyup', handleKeyUp);
+            window.removeEventListener('mousemove', handleMouse);
+            canvas.removeEventListener('touchmove', handleTouch);
         };
     }
 
