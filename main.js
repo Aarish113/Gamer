@@ -4259,28 +4259,68 @@ function initApp() {
             ],
             [
                 "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
-                "WSW........................WGW",
-                "W.W.WWWWWWWWWWWWWWWWWWWWWW.W.W",
-                "W.W.W....................W.W.W",
-                "W.W.W.WWWWWWWWWWWWWWWWWW.W.W.W",
-                "W.W.W.W................W.W.W.W",
-                "W.W.W.W.WWWWWWWWWWWWWW.W.W.W.W",
-                "W.W.W.W.W............W.W.W.W.W",
-                "W.W.W.W.W............W.W.W.W.W",
-                "W.W.W.W.W............W.W.W.W.W",
-                "W.W.W.W.W............W.W.W.W.W",
-                "W.W.W.W.WWWWWWWWWWWWWW.W.W.W.W",
-                "W.W.W.W................W.W.W.W",
-                "W.W.W.WWWWWWWWWWWWWWWWWW.W.W.W",
-                "W.W.W....................W.W.W",
-                "W.W.WWWWWWWWWWWWWWWWWWWWWW.W.W",
-                "W.W........................W.W",
+                "WS...........................W",
+                "W............................W",
+                "W............................W",
+                "W...WWWWWWWWWWWWWWWWWWWWWW...W",
+                "W...W....................W...W",
+                "W...W...WWWWWWWWWWWWWW...W...W",
+                "W...W...W............W...W...W",
+                "W...W...W...WWWWWW...W...W...W",
+                "W...W...W...W....G...W...W...W", // Goal in center
+                "W...W...W...W........W...W...W",
+                "W...W...W...WWWWWWWWWW...W...W",
+                "W...W...W................W...W",
+                "W...W...WWWWWWWWWWWWWWWWWW...W",
+                "W...W........................W",
+                "W...WWWWWWWWWWWWWWWWWWWWWWWWWW",
+                "W............................W",
+                "W............................W",
+                "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"
+            ],
+            [
+                "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+                "WS...........................W",
+                "W............................W",
+                "W............................W",
+                "W............................W",
+                "W............................W",
+                "W............................W",
+                "W............................W",
+                "W............................W",
+                "W............................W",
+                "W............................W",
+                "W............................W",
+                "W............................W",
+                "W............................W",
+                "W............................W",
+                "W............................W",
+                "W............................W",
                 "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"
             ]
         ];
 
+        let survivalMode = false;
+        let survivalTimeRemaining = 150; // 2:30
+        let lastTimeUpdate = 0;
+        let aiGhost = { x: 0, y: 0, color: '#ff0000' };
+
         function initLevel(lvlIdx) {
             isDead = false;
+            survivalMode = (lvlIdx === 5);
+            if (survivalMode) {
+                survivalTimeRemaining = 90; // Balanced to 1:30
+                lastTimeUpdate = Date.now();
+                aiGhost = { 
+                    x: canvas.width - 45, 
+                    y: canvas.height - 45, 
+                    color: '#ff0000' 
+                };
+                if (statusIndicator) {
+                    statusIndicator.innerText = "SURVIVE: 02:30";
+                    statusIndicator.style.color = "#ff0000";
+                }
+            }
             const layout = LEVELS[Math.min(lvlIdx - 1, LEVELS.length - 1)];
             currentLevelData = [];
             for (let r = 0; r < ROWS; r++) {
@@ -4298,9 +4338,9 @@ function initApp() {
             }
             currentPath = [];
             ghostFrame = 0;
-            levelEl.innerText = lvlIdx;
-            ghostsEl.innerText = pastGhosts.length;
-            if (statusIndicator) {
+            levelEl.innerText = lvlIdx === 5 ? "SURVIVAL" : lvlIdx;
+            ghostsEl.innerText = survivalMode ? "AI" : pastGhosts.length;
+            if (!survivalMode && statusIndicator) {
                 statusIndicator.innerText = "SYSTEM RECORDING...";
                 statusIndicator.style.color = "#00ffff";
             }
@@ -4345,7 +4385,7 @@ function initApp() {
 
             // Draw Ghosts
             pastGhosts.forEach((ghost, index) => {
-                const pos = ghost.path[Math.min(ghostFrame, ghost.path.length - 1)];
+                const pos = ghost.path[ghostFrame % ghost.path.length];
                 if (pos) {
                     // Fade in effect during grace period
                     const alpha = ghostFrame < 60 ? ghostFrame / 60 : 1.0;
@@ -4363,11 +4403,11 @@ function initApp() {
                     ctx.strokeStyle = ghost.color;
                     ctx.lineWidth = 2;
                     ctx.globalAlpha = alpha * 0.3;
-                    const lastIdx = Math.min(ghostFrame, ghost.path.length - 1);
-                    const startIdx = Math.max(0, lastIdx - 20);
+                    const ghostCycleFrame = ghostFrame % ghost.path.length;
+                    const startIdx = Math.max(0, ghostCycleFrame - 20);
                     if (ghost.path[startIdx]) {
                         ctx.moveTo(ghost.path[startIdx].x, ghost.path[startIdx].y);
-                        for (let i = startIdx + 1; i <= lastIdx; i++) {
+                        for (let i = startIdx + 1; i <= ghostCycleFrame; i++) {
                             if (ghost.path[i]) ctx.lineTo(ghost.path[i].x, ghost.path[i].y);
                         }
                         ctx.stroke();
@@ -4428,7 +4468,7 @@ function initApp() {
             if (!gameActive) return;
 
             // Smooth movement towards target
-            const speed = 5;
+            const speed = 6; // Buffed speed for survival mode
             if (player.x < player.targetX) player.x = Math.min(player.x + speed, player.targetX);
             if (player.x > player.targetX) player.x = Math.max(player.x - speed, player.targetX);
             if (player.y < player.targetY) player.y = Math.min(player.y + speed, player.targetY);
@@ -4437,34 +4477,70 @@ function initApp() {
             // Record path
             currentPath.push({ x: player.x, y: player.y });
 
-            // Check Goal
-            const gridX = Math.floor(player.x / GRID_SIZE);
-            const gridY = Math.floor(player.y / GRID_SIZE);
-            if (currentLevelData[gridY] && currentLevelData[gridY][gridX] === 'G') {
-                winLevel();
-                return;
-            }
+            // Survival Mode Logic
+            if (survivalMode) {
+                // AI Ghost Movement (Intelligent but Slow, gets faster over time)
+                const timePassed = 90 - survivalTimeRemaining;
+                const speedMultiplier = 1 + (Math.floor(timePassed / 30) * 0.25);
+                const aiSpeed = 1.2 * speedMultiplier;
+                if (aiGhost.x < player.x) aiGhost.x += aiSpeed;
+                if (aiGhost.x > player.x) aiGhost.x -= aiSpeed;
+                if (aiGhost.y < player.y) aiGhost.y += aiSpeed;
+                if (aiGhost.y > player.y) aiGhost.y -= aiSpeed;
 
-            // Check Ghost Collision - Add grace period of 60 frames (approx 1s)
-            if (ghostFrame > 60) {
-                if (statusIndicator && ghostFrame === 61) {
-                    statusIndicator.innerText = "GHOSTS MATERIALIZED - AVOID!";
-                    statusIndicator.style.color = "#ff00ff";
+                // Collision with AI Ghost
+                const adx = player.x - aiGhost.x;
+                const ady = player.y - aiGhost.y;
+                const adist = Math.sqrt(adx * adx + ady * ady);
+                if (adist < 20) {
+                    gameOver("CAUGHT BY THE SYSTEM: SEQUENCE TERMINATED");
                 }
-                pastGhosts.forEach(ghost => {
-                    const pos = ghost.path[Math.min(ghostFrame, ghost.path.length - 1)];
-                    if (pos) {
-                        const dx = player.x - pos.x;
-                        const dy = player.y - pos.y;
-                        const dist = Math.sqrt(dx * dx + dy * dy);
-                        if (dist < 15) {
-                            gameOver("MEMORY COLLISION: SEQUENCE TERMINATED");
-                        }
+
+                // Update Timer
+                const now = Date.now();
+                if (now - lastTimeUpdate >= 1000) {
+                    survivalTimeRemaining--;
+                    lastTimeUpdate = now;
+                    if (statusIndicator) {
+                        const mins = Math.floor(survivalTimeRemaining / 60);
+                        const secs = survivalTimeRemaining % 60;
+                        statusIndicator.innerText = `SURVIVE: ${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
                     }
-                });
-            } else if (statusIndicator) {
-                statusIndicator.innerText = "CALIBRATING MEMORY (STAY CLEAR)...";
-                statusIndicator.style.color = "#00ffff";
+                    if (survivalTimeRemaining <= 0) {
+                        winLevel();
+                        return;
+                    }
+                }
+            } else {
+                // Check Goal (Standard Levels)
+                const gridX = Math.floor(player.x / GRID_SIZE);
+                const gridY = Math.floor(player.y / GRID_SIZE);
+                if (currentLevelData[gridY] && currentLevelData[gridY][gridX] === 'G') {
+                    winLevel();
+                    return;
+                }
+
+                // Check Ghost Collision - Add grace period of 60 frames (approx 1s)
+                if (ghostFrame > 60) {
+                    if (statusIndicator && ghostFrame === 61) {
+                        statusIndicator.innerText = "GHOSTS MATERIALIZED - AVOID!";
+                        statusIndicator.style.color = "#ff00ff";
+                    }
+                    pastGhosts.forEach(ghost => {
+                        const pos = ghost.path[ghostFrame % ghost.path.length];
+                        if (pos) {
+                            const dx = player.x - pos.x;
+                            const dy = player.y - pos.y;
+                            const dist = Math.sqrt(dx * dx + dy * dy);
+                            if (dist < 15) {
+                                gameOver("MEMORY COLLISION: SEQUENCE TERMINATED");
+                            }
+                        }
+                    });
+                } else if (statusIndicator) {
+                    statusIndicator.innerText = "CALIBRATING MEMORY (STAY CLEAR)...";
+                    statusIndicator.style.color = "#00ffff";
+                }
             }
 
             ghostFrame++;
@@ -4476,6 +4552,11 @@ function initApp() {
             gameActive = false;
             cancelAnimationFrame(animationId);
             
+            if (survivalMode) {
+                showCelebration(`You have outlived the system, ${playerName}. Sequence completed.`);
+                return;
+            }
+
             // Save current path as a ghost
             pastGhosts.push({
                 path: [...currentPath],
@@ -4483,7 +4564,19 @@ function initApp() {
             });
 
             level++;
-            if (level > LEVELS.length) {
+            if (level === 5) {
+                // Show Survival Mode Rules
+                if (statusIndicator) {
+                    statusIndicator.innerText = "SURVIVAL MODE DETECTED...";
+                    statusIndicator.style.color = "#ff0000";
+                }
+                setTimeout(() => {
+                    alert("⚠️ SYSTEM OVERRIDE ⚠️\n\nLevel 5: SURVIVAL MODE\nRules have changed. The computer ghost has taken control.\n\n- STAY ALIVE for 1 minute 30 seconds.\n- The computer gets FASTER every 30 seconds.\n- You are faster, but one touch means deletion.\n\nGood luck, User.");
+                    initLevel(level);
+                    gameActive = true;
+                    update();
+                }, 1000);
+            } else if (level > LEVELS.length) {
                 showCelebration(`You have outplayed your past, ${playerName}. The loop is broken.`);
             } else {
                 if (statusIndicator) {
