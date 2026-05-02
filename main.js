@@ -341,7 +341,14 @@ function initApp() {
 
         // Update Text
         if (preloaderText) {
-            preloaderText.innerText = gameId.replace(/-/g, ' ');
+            if (gameId === 'memory-glitch') {
+                preloaderText.innerText = 'ECHO//YOU';
+                preloaderText.classList.add('glitch-text-fx');
+                preloaderText.setAttribute('data-text', 'ECHO//YOU');
+            } else {
+                preloaderText.innerText = gameId.replace(/-/g, ' ');
+                preloaderText.classList.remove('glitch-text-fx');
+            }
             preloaderText.style.backgroundImage = `linear-gradient(to right, #fff, ${color}, #fff)`;
         }
 
@@ -351,6 +358,15 @@ function initApp() {
 
         preloader.classList.add('active');
         preloader.style.opacity = '1';
+
+        // Custom theme for ECHO//YOU
+        if (gameId === 'memory-glitch') {
+            preloader.classList.add('memory-glitch-active');
+            if (backdrop) backdrop.style.display = 'none'; // Hide default backdrop
+        } else {
+            preloader.classList.remove('memory-glitch-active');
+            if (backdrop) backdrop.style.display = '';
+        }
 
         // Animate progress
         let progress = 0;
@@ -434,7 +450,7 @@ function initApp() {
                 loadBrickBreaker();
                 break;
             case 'memory-glitch':
-                gameTitle.innerText = 'Memory Glitch';
+                gameTitle.innerText = 'ECHO//YOU';
                 loadMemoryGlitch();
                 break;
             default:
@@ -4384,38 +4400,40 @@ function initApp() {
             }
 
             // Draw Ghosts
-            pastGhosts.forEach((ghost, index) => {
-                const pos = ghost.path[ghostFrame % ghost.path.length];
-                if (pos) {
-                    // Fade in effect during grace period
-                    const alpha = ghostFrame < 60 ? ghostFrame / 60 : 1.0;
-                    ctx.globalAlpha = alpha;
-                    
-                    ctx.shadowBlur = 15;
-                    ctx.shadowColor = ghost.color;
-                    ctx.fillStyle = ghost.color;
-                    ctx.beginPath();
-                    ctx.arc(pos.x, pos.y, 8, 0, Math.PI * 2);
-                    ctx.fill();
+            if (!survivalMode) {
+                pastGhosts.forEach((ghost, index) => {
+                    const pos = ghost.path[ghostFrame % ghost.path.length];
+                    if (pos) {
+                        // Fade in effect during grace period
+                        const alpha = ghostFrame < 60 ? ghostFrame / 60 : 1.0;
+                        ctx.globalAlpha = alpha;
+                        
+                        ctx.shadowBlur = 15;
+                        ctx.shadowColor = ghost.color;
+                        ctx.fillStyle = ghost.color;
+                        ctx.beginPath();
+                        ctx.arc(pos.x, pos.y, 8, 0, Math.PI * 2);
+                        ctx.fill();
 
-                    // Draw trail
-                    ctx.beginPath();
-                    ctx.strokeStyle = ghost.color;
-                    ctx.lineWidth = 2;
-                    ctx.globalAlpha = alpha * 0.3;
-                    const ghostCycleFrame = ghostFrame % ghost.path.length;
-                    const startIdx = Math.max(0, ghostCycleFrame - 20);
-                    if (ghost.path[startIdx]) {
-                        ctx.moveTo(ghost.path[startIdx].x, ghost.path[startIdx].y);
-                        for (let i = startIdx + 1; i <= ghostCycleFrame; i++) {
-                            if (ghost.path[i]) ctx.lineTo(ghost.path[i].x, ghost.path[i].y);
+                        // Draw trail
+                        ctx.beginPath();
+                        ctx.strokeStyle = ghost.color;
+                        ctx.lineWidth = 2;
+                        ctx.globalAlpha = alpha * 0.3;
+                        const ghostCycleFrame = ghostFrame % ghost.path.length;
+                        const startIdx = Math.max(0, ghostCycleFrame - 20);
+                        if (ghost.path[startIdx]) {
+                            ctx.moveTo(ghost.path[startIdx].x, ghost.path[startIdx].y);
+                            for (let i = startIdx + 1; i <= ghostCycleFrame; i++) {
+                                if (ghost.path[i]) ctx.lineTo(ghost.path[i].x, ghost.path[i].y);
+                            }
+                            ctx.stroke();
                         }
-                        ctx.stroke();
+                        ctx.globalAlpha = 1.0;
+                        ctx.shadowBlur = 0;
                     }
-                    ctx.globalAlpha = 1.0;
-                    ctx.shadowBlur = 0;
-                }
-            });
+                });
+            }
 
             // Draw Player
             ctx.shadowBlur = 20;
@@ -4565,17 +4583,33 @@ function initApp() {
 
             level++;
             if (level === 5) {
-                // Show Survival Mode Rules
-                if (statusIndicator) {
-                    statusIndicator.innerText = "SURVIVAL MODE DETECTED...";
-                    statusIndicator.style.color = "#ff0000";
-                }
-                setTimeout(() => {
-                    alert("⚠️ SYSTEM OVERRIDE ⚠️\n\nLevel 5: SURVIVAL MODE\nRules have changed. The computer ghost has taken control.\n\n- STAY ALIVE for 1 minute 30 seconds.\n- The computer gets FASTER every 30 seconds.\n- You are faster, but one touch means deletion.\n\nGood luck, User.");
+                // Show Survival Mode Rules Overlay
+                gameActive = false;
+                const canvasRect = canvas.getBoundingClientRect();
+                const overlay = document.createElement('div');
+                overlay.className = 'glitch-survival-overlay';
+                overlay.innerHTML = `
+                    <div class="survival-content">
+                        <h2>⚠️ SYSTEM OVERRIDE ⚠️</h2>
+                        <h3>LEVEL 5: SURVIVAL MODE</h3>
+                        <p>The rules have changed. The computer ghost has taken control of the arena.</p>
+                        <ul>
+                            <li><strong>OBJECTIVE:</strong> STAY ALIVE for 1 minute 30 seconds.</li>
+                            <li><strong>THREAT:</strong> The AI ghost is intelligent but slow.</li>
+                            <li><strong>INTENSITY:</strong> The AI gets FASTER every 30 seconds.</li>
+                            <li><strong>ADVANTAGE:</strong> Your speed has been buffed.</li>
+                        </ul>
+                        <button id="start-survival-btn" class="btn-play">BREAK THE SYSTEM</button>
+                    </div>
+                `;
+                gameContainer.appendChild(overlay);
+
+                document.getElementById('start-survival-btn').onclick = () => {
+                    overlay.remove();
                     initLevel(level);
                     gameActive = true;
                     update();
-                }, 1000);
+                };
             } else if (level > LEVELS.length) {
                 showCelebration(`You have outplayed your past, ${playerName}. The loop is broken.`);
             } else {
