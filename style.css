@@ -220,7 +220,7 @@ body {
 /* Main Content */
 main {
     flex: 1;
-    padding: 60px;
+    padding: 30px 60px;
     overflow-y: auto;
     position: relative;
     background: #0f172a; /* Cover any sidebar bleed */
@@ -582,8 +582,8 @@ main {
 }
 
 header h2 {
-    font-size: 2.5rem;
-    margin-bottom: 10px;
+    font-size: 2rem;
+    margin-bottom: 5px;
 }
 
 header p {
@@ -595,7 +595,12 @@ header p {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 30px;
+    margin-bottom: 5px; /* Further reduced from 15px */
+}
+
+.header-left h2 {
+    font-size: 1.5rem !important; /* Smaller game title */
+    margin: 0;
 }
 
 .header-left {
@@ -4180,3 +4185,156 @@ header p {
         margin-left: 0;
     }
 }
+
+/* ---- MEMORY GLITCH ---- */
+.nav-signature {
+    color: #ff00ff !important;
+    text-shadow: 0 0 10px rgba(255, 0, 255, 0.4);
+}
+
+.signature-card {
+    border-color: rgba(255, 0, 255, 0.3) !important;
+    background: rgba(255, 0, 255, 0.05) !important;
+}
+
+.badge-signature {
+    background: linear-gradient(90deg, #ff00ff, #00ffff);
+    color: #000;
+    font-size: 0.65rem;
+    font-weight: 900;
+    padding: 4px 8px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-bottom: 8px;
+    letter-spacing: 1px;
+}
+
+.glitch-preview {
+    position: relative;
+    overflow: hidden;
+}
+
+.glitch-overlay {
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, rgba(0,0,0,0.1) 0px, rgba(0,0,0,0.1) 1px, transparent 1px, transparent 2px);
+    pointer-events: none;
+}
+
+.glitch-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    animation: fadeIn 0.5s ease;
+    width: 100%;
+}
+
+.glitch-stats {
+    display: flex;
+    gap: 40px;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 10px 40px;
+    border-radius: 16px;
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(10px);
+}
+
+.glitch-stat {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+}
+
+.glitch-stat .label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.glitch-stat .value {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #fff;
+}
+
+#glitch-canvas {
+    background: #000;
+    border-radius: 12px;
+    border: 2px solid rgba(255, 0, 255, 0.3);
+    box-shadow: 0 0 40px rgba(255, 0, 255, 0.2);
+    image-rendering: pixelated;
+    max-width: 100%;
+}
+
+.glitch-indicator {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #ff00ff;
+    font-weight: 800;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    animation: flicker 0.1s infinite alternate;
+}
+
+.glitch-indicator::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    background: #ff00ff;
+    border-radius: 50%;
+    box-shadow: 0 0 10px #ff00ff;
+}
+
+@keyframes flicker {
+    0% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+.glitch-text-fx {
+    position: relative;
+    display: inline-block;
+}
+
+.glitch-text-fx::before,
+.glitch-text-fx::after {
+    content: attr(data-text);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.glitch-text-fx::before {
+    left: 2px;
+    text-shadow: -2px 0 #ff00ff;
+    clip: rect(44px, 450px, 56px, 0);
+    animation: glitch-anim 5s infinite linear alternate-reverse;
+}
+
+.glitch-text-fx::after {
+    left: -2px;
+    text-shadow: -2px 0 #00ffff;
+    clip: rect(44px, 450px, 56px, 0);
+    animation: glitch-anim2 5s infinite linear alternate-reverse;
+}
+
+@keyframes glitch-anim {
+    0% { clip: rect(31px, 9999px, 94px, 0); }
+    4.1% { clip: rect(91px, 9999px, 43px, 0); }
+    /* ... more keyframes ... */
+    100% { clip: rect(67px, 9999px, 62px, 0); }
+}
+
+@keyframes glitch-anim2 {
+    0% { clip: rect(10px, 9999px, 85px, 0); }
+    100% { clip: rect(80px, 9999px, 20px, 0); }
+}
+

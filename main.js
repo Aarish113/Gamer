@@ -317,7 +317,8 @@ function initApp() {
             'safe-crossing': '#4ecdc4',
             'pools': '#3b82f6',
             'the-flame': '#FF416C',
-            'dino': '#f97316'
+            'dino': '#f97316',
+            'memory-glitch': '#ff00ff'
         };
 
         const statusMessages = [
@@ -431,6 +432,10 @@ function initApp() {
             case 'brick-breaker':
                 gameTitle.innerText = 'Brick Breaker';
                 loadBrickBreaker();
+                break;
+            case 'memory-glitch':
+                gameTitle.innerText = 'Memory Glitch';
+                loadMemoryGlitch();
                 break;
             default:
                 console.error('Unknown game ID:', gameId);
@@ -550,6 +555,15 @@ function initApp() {
                 <li><strong>Power-Ups:</strong> Catch falling letters for special abilities!</li>
                 <li><strong>(M)</strong> Multi-ball | <strong>(W)</strong> Wide Paddle | <strong>(F)</strong> Fireball</li>
                 <li>Clear all bricks to reach the next level. You have 3 lives!</li>
+            </ul>
+        `,
+        'memory-glitch': () => `
+            <ul>
+                <li>Reach the green exit to progress to the next level.</li>
+                <li>Avoid colliding with your past selves (ghosts).</li>
+                <li>Every level adds a ghost that repeats your previous movements exactly.</li>
+                <li><strong>Controls:</strong> Arrow Keys or WASD to move.</li>
+                <li>Plan your path carefully—you'll have to dodge it next time!</li>
             </ul>
         `
     };
@@ -4131,7 +4145,415 @@ function initApp() {
         };
     }
 
+    // --- MEMORY GLITCH ---
+    function loadMemoryGlitch() {
+        gameContainer.innerHTML = `
+            <div class="glitch-container">
+                <div class="glitch-stats">
+                    <div class="glitch-stat">
+                        <span class="label">Level</span>
+                        <span class="value" id="glitch-level">1</span>
+                    </div>
+                    <div class="glitch-stat">
+                        <span class="label">Ghosts</span>
+                        <span class="value" id="glitch-ghosts">0</span>
+                    </div>
+                </div>
+                <div style="position: relative;">
+                    <div id="glitch-status-indicator" class="glitch-indicator">SYSTEM RECORDING...</div>
+                    <canvas id="glitch-canvas" width="900" height="540"></canvas>
+                </div>
+                <div class="glitch-controls">
+                    <button id="glitch-start-btn" class="btn-play">Initialize Sequence</button>
+                </div>
+            </div>
+        `;
+        currentGameCleanup = initMemoryGlitchLogic();
+    }
+
+    function initMemoryGlitchLogic() {
+        const canvas = document.getElementById('glitch-canvas');
+        if (!canvas) return () => {};
+        const ctx = canvas.getContext('2d');
+        const levelEl = document.getElementById('glitch-level');
+        const ghostsEl = document.getElementById('glitch-ghosts');
+        const startBtn = document.getElementById('glitch-start-btn');
+        const statusIndicator = document.getElementById('glitch-status-indicator');
+
+        const GRID_SIZE = 30;
+        const ROWS = canvas.height / GRID_SIZE;
+        const COLS = canvas.width / GRID_SIZE;
+
+        let level = 1;
+        let gameActive = false;
+        let isDead = false;
+        let animationId = null;
+        let player = { x: 0, y: 0, targetX: 0, targetY: 0, color: '#00ffff' };
+        let currentPath = [];
+        let pastGhosts = [];
+        let ghostFrame = 0;
+        let currentLevelData = [];
+        
+        const ghostColors = ['#ff00ff', '#00ff00', '#ffff00', '#ff8000', '#ff0000', '#8000ff'];
+
+        const LEVELS = [
+            [
+                "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+                "WS...........................W",
+                "W............................W",
+                "W............................W",
+                "W............................W",
+                "W............................W",
+                "W............................W",
+                "W............................W",
+                "W............................W",
+                "W............................W",
+                "W............................W",
+                "W............................W",
+                "W............................W",
+                "W............................W",
+                "W............................W",
+                "W............................W",
+                "W...........................GW",
+                "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"
+            ],
+            [
+                "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+                "WS.........W........W........W",
+                "W..........W........W........W",
+                "W..........W........W........W",
+                "W..........W........W........W",
+                "W............................W", // Top gap
+                "W..........W........W........W",
+                "W..........W........W........W",
+                "W..........W........W........W",
+                "W..........W........W........W",
+                "W..........W........W........W",
+                "W............................W", // Middle gap
+                "W..........W........W........W",
+                "W..........W........W........W",
+                "W..........W........W........W",
+                "W..........W........W........W",
+                "W..........W........W.......GW",
+                "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"
+            ],
+            [
+                "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+                "WS...........................W",
+                "W.WWWWWWWWWWWWWWWWWWWWWWWWWW.W",
+                "W............................W",
+                "W.WWWWWWWWWWWWWWWWWWWWWWWWWW.W",
+                "W............................W",
+                "W.WWWWWWWWWWWWWWWWWWWWWWWWWW.W",
+                "W............................W",
+                "W.WWWWWWWWWWWWWWWWWWWWWWWWWW.W",
+                "W............................W",
+                "W.WWWWWWWWWWWWWWWWWWWWWWWWWW.W",
+                "W............................W",
+                "W.WWWWWWWWWWWWWWWWWWWWWWWWWW.W",
+                "W............................W",
+                "W.WWWWWWWWWWWWWWWWWWWWWWWWWW.W",
+                "W............................W",
+                "W...........................GW",
+                "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"
+            ],
+            [
+                "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+                "WSW........................WGW",
+                "W.W.WWWWWWWWWWWWWWWWWWWWWW.W.W",
+                "W.W.W....................W.W.W",
+                "W.W.W.WWWWWWWWWWWWWWWWWW.W.W.W",
+                "W.W.W.W................W.W.W.W",
+                "W.W.W.W.WWWWWWWWWWWWWW.W.W.W.W",
+                "W.W.W.W.W............W.W.W.W.W",
+                "W.W.W.W.W............W.W.W.W.W",
+                "W.W.W.W.W............W.W.W.W.W",
+                "W.W.W.W.W............W.W.W.W.W",
+                "W.W.W.W.WWWWWWWWWWWWWW.W.W.W.W",
+                "W.W.W.W................W.W.W.W",
+                "W.W.W.WWWWWWWWWWWWWWWWWW.W.W.W",
+                "W.W.W....................W.W.W",
+                "W.W.WWWWWWWWWWWWWWWWWWWWWW.W.W",
+                "W.W........................W.W",
+                "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"
+            ]
+        ];
+
+        function initLevel(lvlIdx) {
+            isDead = false;
+            const layout = LEVELS[Math.min(lvlIdx - 1, LEVELS.length - 1)];
+            currentLevelData = [];
+            for (let r = 0; r < ROWS; r++) {
+                currentLevelData[r] = [];
+                for (let c = 0; c < COLS; c++) {
+                    const char = layout[r][c];
+                    currentLevelData[r][c] = char;
+                    if (char === 'S') {
+                        player.x = c * GRID_SIZE + GRID_SIZE / 2;
+                        player.y = r * GRID_SIZE + GRID_SIZE / 2;
+                        player.targetX = player.x;
+                        player.targetY = player.y;
+                    }
+                }
+            }
+            currentPath = [];
+            ghostFrame = 0;
+            levelEl.innerText = lvlIdx;
+            ghostsEl.innerText = pastGhosts.length;
+            if (statusIndicator) {
+                statusIndicator.innerText = "SYSTEM RECORDING...";
+                statusIndicator.style.color = "#00ffff";
+            }
+        }
+
+        function draw() {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Grid
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= canvas.width; i += GRID_SIZE) {
+                ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke();
+            }
+            for (let i = 0; i <= canvas.height; i += GRID_SIZE) {
+                ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke();
+            }
+
+            // Draw Walls & Goal
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    const cell = currentLevelData[r][c];
+                    if (cell === 'W') {
+                        ctx.fillStyle = '#1e293b';
+                        ctx.fillRect(c * GRID_SIZE + 2, r * GRID_SIZE + 2, GRID_SIZE - 4, GRID_SIZE - 4);
+                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+                        ctx.strokeRect(c * GRID_SIZE + 2, r * GRID_SIZE + 2, GRID_SIZE - 4, GRID_SIZE - 4);
+                    } else if (cell === 'G') {
+                        const time = Date.now() / 500;
+                        const glow = 10 + Math.sin(time) * 5;
+                        ctx.shadowBlur = glow;
+                        ctx.shadowColor = '#00ff00';
+                        ctx.fillStyle = '#00ff00';
+                        ctx.beginPath();
+                        ctx.arc(c * GRID_SIZE + GRID_SIZE / 2, r * GRID_SIZE + GRID_SIZE / 2, GRID_SIZE / 4, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.shadowBlur = 0;
+                    }
+                }
+            }
+
+            // Draw Ghosts
+            pastGhosts.forEach((ghost, index) => {
+                const pos = ghost.path[Math.min(ghostFrame, ghost.path.length - 1)];
+                if (pos) {
+                    // Fade in effect during grace period
+                    const alpha = ghostFrame < 60 ? ghostFrame / 60 : 1.0;
+                    ctx.globalAlpha = alpha;
+                    
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = ghost.color;
+                    ctx.fillStyle = ghost.color;
+                    ctx.beginPath();
+                    ctx.arc(pos.x, pos.y, 8, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Draw trail
+                    ctx.beginPath();
+                    ctx.strokeStyle = ghost.color;
+                    ctx.lineWidth = 2;
+                    ctx.globalAlpha = alpha * 0.3;
+                    const lastIdx = Math.min(ghostFrame, ghost.path.length - 1);
+                    const startIdx = Math.max(0, lastIdx - 20);
+                    if (ghost.path[startIdx]) {
+                        ctx.moveTo(ghost.path[startIdx].x, ghost.path[startIdx].y);
+                        for (let i = startIdx + 1; i <= lastIdx; i++) {
+                            if (ghost.path[i]) ctx.lineTo(ghost.path[i].x, ghost.path[i].y);
+                        }
+                        ctx.stroke();
+                    }
+                    ctx.globalAlpha = 1.0;
+                    ctx.shadowBlur = 0;
+                }
+            });
+
+            // Draw Player
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = player.color;
+            ctx.fillStyle = player.color;
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, 10, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // Draw current path trail
+            if (currentPath.length > 1) {
+                ctx.beginPath();
+                ctx.strokeStyle = player.color;
+                ctx.lineWidth = 3;
+                ctx.globalAlpha = 0.5;
+                const startIdx = Math.max(0, currentPath.length - 30);
+                ctx.moveTo(currentPath[startIdx].x, currentPath[startIdx].y);
+                for (let i = startIdx + 1; i < currentPath.length; i++) {
+                    ctx.lineTo(currentPath[i].x, currentPath[i].y);
+                }
+                ctx.stroke();
+                ctx.globalAlpha = 1.0;
+            }
+
+            if (isDead) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.font = 'bold 80px "Outfit"';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                // Glitch effect for text
+                const offset = Math.sin(Date.now() / 50) * 5;
+                ctx.fillStyle = '#ff00ff';
+                ctx.fillText('YOU DIED', canvas.width / 2 + offset, canvas.height / 2);
+                ctx.fillStyle = '#00ffff';
+                ctx.fillText('YOU DIED', canvas.width / 2 - offset, canvas.height / 2);
+                ctx.fillStyle = '#ff0000';
+                ctx.fillText('YOU DIED', canvas.width / 2, canvas.height / 2);
+
+                ctx.font = '20px "Outfit"';
+                ctx.fillStyle = '#fff';
+                ctx.fillText('MEMORY CORRUPTION DETECTED', canvas.width / 2, canvas.height / 2 + 60);
+            }
+        }
+
+        function update() {
+            if (!gameActive) return;
+
+            // Smooth movement towards target
+            const speed = 5;
+            if (player.x < player.targetX) player.x = Math.min(player.x + speed, player.targetX);
+            if (player.x > player.targetX) player.x = Math.max(player.x - speed, player.targetX);
+            if (player.y < player.targetY) player.y = Math.min(player.y + speed, player.targetY);
+            if (player.y > player.targetY) player.y = Math.max(player.y - speed, player.targetY);
+
+            // Record path
+            currentPath.push({ x: player.x, y: player.y });
+
+            // Check Goal
+            const gridX = Math.floor(player.x / GRID_SIZE);
+            const gridY = Math.floor(player.y / GRID_SIZE);
+            if (currentLevelData[gridY] && currentLevelData[gridY][gridX] === 'G') {
+                winLevel();
+                return;
+            }
+
+            // Check Ghost Collision - Add grace period of 60 frames (approx 1s)
+            if (ghostFrame > 60) {
+                if (statusIndicator && ghostFrame === 61) {
+                    statusIndicator.innerText = "GHOSTS MATERIALIZED - AVOID!";
+                    statusIndicator.style.color = "#ff00ff";
+                }
+                pastGhosts.forEach(ghost => {
+                    const pos = ghost.path[Math.min(ghostFrame, ghost.path.length - 1)];
+                    if (pos) {
+                        const dx = player.x - pos.x;
+                        const dy = player.y - pos.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < 15) {
+                            gameOver("MEMORY COLLISION: SEQUENCE TERMINATED");
+                        }
+                    }
+                });
+            } else if (statusIndicator) {
+                statusIndicator.innerText = "CALIBRATING MEMORY (STAY CLEAR)...";
+                statusIndicator.style.color = "#00ffff";
+            }
+
+            ghostFrame++;
+            draw();
+            animationId = requestAnimationFrame(update);
+        }
+
+        function winLevel() {
+            gameActive = false;
+            cancelAnimationFrame(animationId);
+            
+            // Save current path as a ghost
+            pastGhosts.push({
+                path: [...currentPath],
+                color: ghostColors[pastGhosts.length % ghostColors.length]
+            });
+
+            level++;
+            if (level > LEVELS.length) {
+                showCelebration(`You have outplayed your past, ${playerName}. The loop is broken.`);
+            } else {
+                if (statusIndicator) {
+                    statusIndicator.innerText = "MEMORY LOADED. RE-INITIALIZING...";
+                    statusIndicator.style.color = "#00ffff";
+                }
+                setTimeout(() => {
+                    initLevel(level);
+                    gameActive = true;
+                    update();
+                }, 1500);
+            }
+        }
+
+        function gameOver(msg) {
+            gameActive = false;
+            isDead = true;
+            draw(); // Draw final frame with overlay
+            cancelAnimationFrame(animationId);
+            if (statusIndicator) {
+                statusIndicator.innerText = "YOU DIED: SEQUENCE TERMINATED";
+                statusIndicator.style.color = "#ff0000";
+            }
+            if (startBtn) {
+                startBtn.style.display = 'block';
+                startBtn.innerText = 'RESTORE MEMORY (RETRY)';
+            }
+        }
+
+        function handleInput(e) {
+            if (!gameActive) return;
+            const key = e.key;
+            let nextX = player.targetX;
+            let nextY = player.targetY;
+
+            if (key === 'ArrowUp' || key === 'w' || key === 'W') nextY -= GRID_SIZE;
+            if (key === 'ArrowDown' || key === 's' || key === 'S') nextY += GRID_SIZE;
+            if (key === 'ArrowLeft' || key === 'a' || key === 'A') nextX -= GRID_SIZE;
+            if (key === 'ArrowRight' || key === 'd' || key === 'D') nextX += GRID_SIZE;
+
+            const gridX = Math.floor(nextX / GRID_SIZE);
+            const gridY = Math.floor(nextY / GRID_SIZE);
+
+            if (currentLevelData[gridY] && currentLevelData[gridY][gridX] !== 'W') {
+                player.targetX = nextX;
+                player.targetY = nextY;
+            }
+        }
+
+        startBtn.onclick = () => {
+            if (gameActive) return;
+            pastGhosts = [];
+            level = 1;
+            initLevel(level);
+            gameActive = true;
+            startBtn.style.display = 'none';
+            update();
+        };
+
+        window.addEventListener('keydown', handleInput);
+
+        return () => {
+            gameActive = false;
+            cancelAnimationFrame(animationId);
+            window.removeEventListener('keydown', handleInput);
+        };
+    }
+
 }
+
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initApp);
